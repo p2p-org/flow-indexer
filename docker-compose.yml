@@ -1,0 +1,82 @@
+version: '3'
+
+networks:
+  flow_network:
+
+
+services:
+  flow_db:
+    container_name: flow_postgres
+    build: './db'
+    hostname: flow_postgres
+    ports:
+      - 5432:5432
+    networks:
+      - flow_network
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: flow
+    volumes:
+      - ./db-data:/var/lib/postgresql/data
+
+  flow_rabbitmq:
+    container_name: flow_rabbitmq
+    image: rabbitmq:3-management-alpine
+    hostname: flow_rabbitmq
+    ports:
+      - 5672:5672
+      - 15672:15672
+    networks:
+      - flow_network
+    environment:
+      RABBITMQ_DEFAULT_USER: username
+      RABBITMQ_DEFAULT_PASS: password
+    volumes:
+      - ./rabbitmq:/var/lib/rabbitmq
+
+  flow_framework:
+    container_name: flow_framework
+    build:
+      context: ./framework
+      dockerfile: Dockerfile
+    networks:
+      - flow_network
+    ports:
+      - 3000:3000
+    depends_on:
+      - flow_db
+      - flow_rabbitmq
+    volumes:
+      - ./framework:/usr/src/app
+      - /usr/src/app/node_modules/
+      - ./.env:/usr/src/app/.env
+
+  flow_block_sensor:
+    container_name: flow_block_sensor
+    build:
+      context: ./src/block-sensor
+      dockerfile: Dockerfile
+    networks:
+      - flow_network
+    depends_on:
+      - flow_db
+      - flow_rabbitmq
+    volumes:
+      - ./src/block-sensor:/usr/src/app
+      - ./.env:/usr/src/app/.env
+
+  flow_block_processor:
+    #    container_name: flow_block_processor
+    build:
+      context: ./src/block-processor
+      dockerfile: Dockerfile
+    networks:
+      - flow_network
+    depends_on:
+      - flow_db
+      - flow_rabbitmq
+    volumes:
+      - ./src/block-processor:/usr/src/app
+      - ./.env:/usr/src/app/.env
+
