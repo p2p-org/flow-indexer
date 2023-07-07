@@ -1,23 +1,16 @@
-# MBELT3
+# Flow Indexer
 
 # Introduction
 
-Multi blockchain ETL solution is an interoperability-first data warehouse to provide application-specific data, designed to reduce cost as well as simplify the process of building wallets, dashboards, explorers and apps that interact with multiple blockchains connected through an interchain communication protocol.
+Flow indexer is an first open-source data warehouse to provide application-specific data, designed to reduce cost as well as simplify the process of building wallets, dashboards, explorers and apps that interact with Flow blockchain.
 
 # Features
 
-- Support extract and store data from Polkadot, Kusama and Parachains like Moonbeam or Moonriver
-- High-speed extraction (up to 50 thousands blocks per hour for 1 instance with 1CPU and 150MB RAM)
-- High-scalability (100 instances can process 1 million blocks per hour).
+- Real-time data (20 seconds delay max in the appearance of a block in the database)
+- High-speed extraction (up to 3000 blocks per hour for 1 instance with 1CPU and 150MB RAM)
+- High-scalability (100 instances can process 300K million blocks per hour).
 - High-speed access to extracted data (up to 10 thousands rows per second)
-- Staking and reward information for hundreds of validators and collators
 - Docker-compose in-house setup in 5 seconds
-
-# Data structure
-
-MBELT3 provide historical data for raw data, staking, identity, balances and governance
-
-![MBELT3 data diagram](./docs/data.png)
 
 # Dependencies
 
@@ -26,12 +19,13 @@ MBELT3 provide historical data for raw data, staking, identity, balances and gov
 
 # Ram requirements
 
-- BlockListener: 1cpu, 200MB
+- BlockSensors: 1cpu, 200MB
 - BlockProcessor: 1-100cpu, 200MB
-- StakingProcessor: 1cpu, 500MB
-- Postgresql: 1GB
+- IndexerFramework: 1cpu, 500MB
+- Postgresql:1cpu, 1GB
+- RabbitMQ: 1cpu, 300MB
 
-You need RPC-node **in archive mode** with an open websocket interface.
+You need own RPC-node **in archive mode**.
 
 Docker service should be started first.
 
@@ -100,11 +94,11 @@ docker-compose version 1.20.1, build 1719ceb
 ```
 1) Create .env file
 
-cp main/.env.example main/.env 
+cp .env.sample .env 
 
-2) Specify substrate URL in .env file. Like
+2) Specify RPC URL in .env file. Like
 
-SUBSTRATE_URI=wss://rpc.polkadot.io/
+RPC_URI=wss://rpc.polkadot.io/
 
 3) Start docker containers
 
@@ -191,6 +185,22 @@ DB shema is desribed in ./db directory
 
 It is used as entrypoint SQL when Postgres started by ./db/Dockerfile from ./docker-compose.yml
 
+Tables structre:
+
+- blocks: This table stores information about blocks, including block height, block ID, parent id, block time, parent_voter_signature
+
+- events: This table stores information about events, including block heught, event ID, transaction ID, transaction index, event index, type and payload.
+
+- transactions: This table stores information about extrinsics, including block height, block ID, transaction ID, script, arguments, reference_block_id, gas_limit, payer, proposal_key, authorizers, payload_signatures, envelope_signatures, execution, status, status_code, error_message, computation_used.
+
+- processing_tasks: This table stores information about processing tasks, including network ID, entity, entity ID, status, collection unique ID, start time, finish time, data, attempts, and a unique identifier (row_id).
+
+- processing_state: This table stores information about the processing state, including network ID, entity, entity ID, and a unique identifier (row_id). It also has a constraint to ensure a unique combination of entity and network ID.
+
+- processing_metrics: This table stores information about the processing metrics, including delay_time_ms, process_time_ms, missed_count, duplicates_count, rpc_sync_diff_count, memory_usage_mb, not_processed_count and restart.
+
+
+
 ## Workflow
 
 - **BlockListener**
@@ -241,9 +251,8 @@ It is used as entrypoint SQL when Postgres started by ./db/Dockerfile from ./doc
 
 
 
-## Mbelt architecture diagram
+## Architecture diagram
 
-![MBELT3 architecture diagram](./docs/arch3.png)
 
 # How to add additional processor module
 
@@ -257,13 +266,4 @@ To add an additional processor:
 - add event name and queue in the tasks lib [tasks repository](./main/src/lib/tasks.repository.ts)
 - subscribe your processor hanlders on the target queue messages in [module service](./main/src/apps/modules/new_module/index.ts)
 
-# How to add new chain to the platform
-
-Currently we added Moonbeam network to the streamer.
-
-Due to the custom metadata we created the `moonbeam` brahcn in the repo with changed polkadot api initialization and removed staking-related queries.
-
-In general you can spin up a new process of streamer with changed `SUBSTRATE_URI` in .env
-
-Streamer will see if this network exists in in the `networks` table, if not - new network record will be created, and new data will be stored in the DB with the new `network_id` value.
 

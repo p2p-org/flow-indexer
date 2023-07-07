@@ -62,7 +62,8 @@ def fetch_block_data(block_height):
                         transaction["result"] = tr_transaction_data_data
                         transaction_data["transactions"].append(transaction)
                     else:
-                        raise Exception("Cannot fetch transaction result")
+                        logger.error("Cannot fetch transaction result")
+                        return
 
 
                 for transaction in transaction_data['transactions']:
