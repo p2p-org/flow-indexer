@@ -17,7 +17,7 @@ logger = pino(
 rpc_uri = os.environ.get("RPC_URI")
 
 
-def fetch_block_data(block_height):
+def fetch_block_data(block_height: int):
     logger.info(f'Fetching block with height: {block_height}')
     try:
         response = requests.get(f'{rpc_uri}/v1/blocks?height={block_height}&expand=payload,execution_result')
@@ -112,7 +112,7 @@ channel.queue_declare(queue=receive_queue_name, durable=True)
 channel.queue_declare(queue=send_queue_name, durable=True)
 
 
-def processQueueMessage(ch, method, properties, body):
+def processQueueMessage(ch, method, properties, body: str):
     logger.info(f"Received message: {body}")
     json_data = json.loads(body)
     data = fetch_block_data(int(json_data['entity_id']))
@@ -122,7 +122,7 @@ def processQueueMessage(ch, method, properties, body):
     ch.basic_ack(delivery_tag=method.delivery_tag)
 
 
-def sendMessageToQueue(message):
+def sendMessageToQueue(message: json):
     channel.basic_publish(exchange='', routing_key=send_queue_name, body=json.dumps(message))
 
 

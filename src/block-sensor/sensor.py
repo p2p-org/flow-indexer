@@ -26,7 +26,7 @@ queue_name = os.environ.get('RABBITMQ_QUEUE_BLOCK_SENSOR')
 channel.queue_declare(queue=queue_name, durable=True)
 
 
-def sendMessageToQueue(message):
+def sendMessageToQueue(message: json):
     channel.basic_publish(
         exchange='',
         routing_key=queue_name,
