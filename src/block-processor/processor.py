@@ -1,6 +1,5 @@
 import json
 import requests
-import json
 import base64
 import sys
 import pika
@@ -17,9 +16,10 @@ logger = pino(
 
 rpc_uri = os.environ.get("RPC_URI")
 
+
 def fetch_block_data(block_height):
     logger.info(f'Fetching block with height: {block_height}')
-    try: 
+    try:
         response = requests.get(f'{rpc_uri}/v1/blocks?height={block_height}&expand=payload,execution_result')
 
         logger.info(f'{rpc_uri}/v1/blocks?height={block_height}&expand=payload,execution_result')
@@ -28,7 +28,6 @@ def fetch_block_data(block_height):
             json_data = json.loads(response.content)
             block_data = json_data[0]
 
-        
         return_data = {
             "entity_id": block_data['header']['height'],
             "block": {
@@ -36,17 +35,14 @@ def fetch_block_data(block_height):
                 "block_id": block_data['header']['id'],
                 "parent_id": block_data['header']['parent_id'],
                 "block_time": block_data['header']['timestamp'],
-                "parent_voter_signature": block_data['header']['parent_voter_signature'],
-             },
+                "parent_voter_signature": block_data['header']['parent_voter_signature']
+            },
             "transactions": [],
             "events": []
         }
-        
 
-        #--- -------------- TRANSACTIONS --------------------------
+        # ---------------- TRANSACTIONS --------------------------
         for transaction_payload in block_data["payload"]["collection_guarantees"]:
-
-            #print(f'{rpc_uri}/v1/collections/{transaction_payload["collection_id"]}?expand=transactions')
             tr_response = requests.get(f'{rpc_uri}/v1/collections/{transaction_payload["collection_id"]}?expand=transactions')
             if tr_response.status_code == 200:
                 tr_json_data = json.loads(tr_response.content)
@@ -65,15 +61,13 @@ def fetch_block_data(block_height):
                         logger.error("Cannot fetch transaction result")
                         return
 
-
                 for transaction in transaction_data['transactions']:
-
-                    return_data["transactions"].append( {
+                    return_data["transactions"].append({
                         "block_height": block_data['header']['height'],
                         "block_id": block_data["header"]["id"],
                         "transaction_id": transaction["id"],
                         "script": base64.b64decode(transaction["script"]).decode('utf-8'),
-                        "arguments": json.dumps(list(map((lambda x:  json.loads(base64.b64decode(x).decode('utf-8'))), transaction["arguments"]))),
+                        "arguments": json.dumps(list(map((lambda x: json.loads(base64.b64decode(x).decode('utf-8'))), transaction["arguments"]))),
                         "reference_block_id": transaction["reference_block_id"],
                         "gas_limit": transaction["gas_limit"],
                         "payer": transaction["payer"],
@@ -86,12 +80,11 @@ def fetch_block_data(block_height):
                         "status_code": transaction["result"]["status_code"],
                         "error_message": transaction["result"]["error_message"],
                         "computation_used": transaction["result"]["computation_used"],
-                    });
-
+                    })
 
                 for transaction in transaction_data['transactions']:
                     for event in transaction['result']['events']:
-                        return_data["events"].append( {
+                        return_data["events"].append({
                             "block_height": block_data['header']['height'],
                             "block_id": block_data["header"]["id"],
                             "transaction_id": transaction["id"],
@@ -108,10 +101,7 @@ def fetch_block_data(block_height):
         return
 
 
-
-#----------------- RABBIT MQ --------------------------
-
-#Init RabbitMQ connection
+# Init RabbitMQ connection
 time.sleep(10)
 parameters = pika.URLParameters(os.environ.get('RABBITMQ'))
 connection = pika.BlockingConnection(parameters)
@@ -121,20 +111,22 @@ send_queue_name = os.environ.get('RABBITMQ_QUEUE_BLOCK_WRITER')
 channel.queue_declare(queue=receive_queue_name, durable=True)
 channel.queue_declare(queue=send_queue_name, durable=True)
 
+
 def processQueueMessage(ch, method, properties, body):
     logger.info(f"Received message: {body}")
     json_data = json.loads(body)
     data = fetch_block_data(int(json_data['entity_id']))
-    if ( data ):
-       sendMessageToQueue(data)
+    if (data):
+        sendMessageToQueue(data)
 
     ch.basic_ack(delivery_tag=method.delivery_tag)
+
 
 def sendMessageToQueue(message):
     channel.basic_publish(exchange='', routing_key=send_queue_name, body=json.dumps(message))
 
 
-# Начинаем получать сообщения из очереди
+# Read messages from queue
 channel.basic_qos(prefetch_count=1)
 channel.basic_consume(queue=receive_queue_name, on_message_callback=processQueueMessage, auto_ack=False)
 
@@ -145,8 +137,5 @@ try:
 except KeyboardInterrupt:
     channel.stop_consuming()
 
-# Закрываем соединение
+# Close connection
 connection.close()
-
-
-
