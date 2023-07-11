@@ -1,7 +1,6 @@
 import { Service, Inject } from 'typedi'
 import express from 'express'
 import { Logger } from 'pino'
-
 import { ENTITY } from '@/models/processing_task.model'
 import { BlockListenerService } from './service'
 

@@ -251,6 +251,18 @@ Tables structre:
   - To reduce tables amount, we store this data slighlty denormalized, e.g. for proposals we store events such as `proposed`, `approved`, `executed` as well as `Votes` records from 'vote' extrinsics.
 
 
+## Indexer SLI metrics for each ODS
+1. Speed
+      - *delay_time_ms* - from appearing in the blockchain to being found in the database (milliseconds)
+      - *process_time_ms* - block processing time (milliseconds)      
+2. Data quality
+      - *missed_count* - number of missed blocks
+      - *duplicates_count* - number of duplicates records
+      - *rpc_sync_diff_count* - diff between RPC and database
+3. System
+      - *memory_usage_mb* - used memory for processing each task
+      - *not_processed_count* - number of unprocessed tasks
+      - *restart* - count of indexer restarts
 
 ## Architecture diagram
 

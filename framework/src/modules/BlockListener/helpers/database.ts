@@ -1,7 +1,6 @@
 import { Inject, Service } from 'typedi'
 import { Knex } from 'knex'
 import { Logger } from 'pino'
-
 import { ENTITY } from '@/models/processing_task.model'
 import { ProcessingStateModel } from '@/models/processing_status.model'
 import { environment } from '@/environment'

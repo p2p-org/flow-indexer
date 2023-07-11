@@ -1,5 +1,4 @@
 import { Service } from 'typedi'
-import '@polkadot/api-augment'
 import { environment } from '@/environment'
 import needle from 'needle'
 
@@ -18,6 +17,5 @@ export class MonitoringSlackHelper {
       console.error('Slack send error', e)
     }
   }
-
 }
 

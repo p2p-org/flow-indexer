@@ -21,6 +21,7 @@ export class BlockListenerService {
   gracefulShutdownFlag = false
   messagesBeingProcessed = false
   isPaused = false
+  lastReceviedBlockId = 0;
 
   constructor(
     @Inject('logger') private readonly logger: Logger,
@@ -37,6 +38,7 @@ export class BlockListenerService {
 
 
   private async newBlock(blockId: number): Promise<void> {
+    this.lastReceviedBlockId = blockId;
     if (this.messagesBeingProcessed || this.isPaused) return
     //this.logger.debug({ event: 'BlocksListener.preload newFinalizedBlock', newFinalizedBlockId: blockId })
     const lastBlockIdInProcessingState = await this.databaseHelper.findLastEntityId(ENTITY.BLOCK)
@@ -45,6 +47,9 @@ export class BlockListenerService {
     await this.preloadMultipleBlocks({ fromBlock: lastBlockIdInProcessingState + 1, toBlock: blockId, updateState: true })
   }
 
+  public getLastRPCBlockId(): number {
+    return this.lastReceviedBlockId
+  }
 
   public async preloadMultipleBlocks(args: { fromBlock: number; toBlock: number, updateState: boolean }): Promise<void> {
     if (this.messagesBeingProcessed) return

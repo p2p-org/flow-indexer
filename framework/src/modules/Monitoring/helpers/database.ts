@@ -1,6 +1,5 @@
 import { Inject, Service } from 'typedi'
 import { Knex } from 'knex'
-import { BlockModel } from '@/models/block.model'
 import { environment } from '@/environment'
 
 @Service()
@@ -10,23 +9,24 @@ export class MonitoringDatabaseHelper {
     @Inject('knex') private readonly knex: Knex,
   ) { }
 
-  async getLastBlock(): Promise<BlockModel> {
+  async getLastBlockId(): Promise<any> {
     const sql = `
       SELECT * 
       FROM blocks      
       WHERE network_id=${environment.NETWORK_ID}
-      ORDER BY block_id DESC
+      ORDER BY block_height DESC
       LIMIT 1`
+
     const blocks = await this.knex.raw(sql)
-    return blocks.rows[0]
+    return blocks.rows[0].block_height
   }
 
   async getDublicatesBlocks(): Promise<Array<any>> {
     const sql = `
-      SELECT block_id, count(block_id) as count_id
+      SELECT block_height, count(block_height) as count_id
       FROM blocks
       WHERE network_id=${environment.NETWORK_ID}
-      GROUP BY block_id
+      GROUP BY block_height
       HAVING COUNT(*) > 1
       LIMIT 10`
     const dublicatesBlocks = await this.knex.raw(sql)
@@ -36,35 +36,11 @@ export class MonitoringDatabaseHelper {
   async getMissedBlocks(lastBlockId: number): Promise<Array<any>> {
     const missedBlocksSQL = `
       SELECT generate_series(${lastBlockId - 1002}, ${lastBlockId - 2}) as missing_block except 
-      SELECT block_id FROM blocks WHERE network_id=${environment.NETWORK_ID} 
+      SELECT block_height FROM blocks WHERE network_id=${environment.NETWORK_ID} 
       ORDER BY missing_block
       LIMIT 10`
     const missedBlocksRows = await this.knex.raw(missedBlocksSQL)
     return missedBlocksRows.rows
-  }
-
-  async getMissedRounds(lastRoundId?: number): Promise<Array<any>> {
-    if (!lastRoundId) return []
-    const missedRoundsSQL = `
-      SELECT generate_series(3, ${lastRoundId - 3}) as missing_round except 
-      SELECT round_id FROM rounds WHERE network_id=${environment.NETWORK_ID}
-      ORDER BY missing_round
-      LIMIT 10`
-    const missedRoundsRows = await this.knex.raw(missedRoundsSQL)
-    return missedRoundsRows.rows
-  }
-
-  async getMissedEras(lastEraId?: number): Promise<Array<any>> {
-    if (!lastEraId) return []
-    const startEra = environment.NETWORK === 'kusama' ? 760 : 1
-    const missedErasSQL = `
-      SELECT generate_series(${startEra}, ${lastEraId - 2}) as missing_era 
-      EXCEPT
-        SELECT era_id FROM eras WHERE network_id=${environment.NETWORK_ID} 
-      ORDER BY missing_era
-      LIMIT 10`
-    const missedErasRows = await this.knex.raw(missedErasSQL)
-    return missedErasRows.rows
   }
 
   async getMissedProcessingTasks(): Promise<Array<any>> {
