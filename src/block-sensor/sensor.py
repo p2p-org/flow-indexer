@@ -17,7 +17,7 @@ logger = pino(
 
 rpc_uri = os.environ.get("RPC_URI")
 queue_name = os.environ.get('RABBITMQ_QUEUE_BLOCK_SENSOR')
-channe = None
+channel = None
 
 
 def connectToRabbitMQ():
@@ -33,6 +33,7 @@ def connectToRabbitMQ():
 
 def sendMessageToRabbitMQ(message: json):
     global channel
+
     if channel is None:
         connectToRabbitMQ()
 
