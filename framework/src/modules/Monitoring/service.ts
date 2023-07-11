@@ -32,10 +32,10 @@ export class MonitoringService {
     cron.schedule('*/5 * * * *', async () => {
       this.checkProcessingTasks()
     })
-    cron.schedule('* * * * *', async () => {
+    cron.schedule('0 * * * *', async () => {
       this.checkBlocksSync()
     })
-    cron.schedule('* * * * *', async () => {
+    cron.schedule('*/30 * * * *', async () => {
       this.checkMissingBlocks()
     })
     cron.schedule('45 0 * * *', async () => {

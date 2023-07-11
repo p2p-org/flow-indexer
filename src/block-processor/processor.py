@@ -101,16 +101,7 @@ def fetch_block_data(block_height: int):
         return
 
 
-# Init RabbitMQ connection
-time.sleep(10)
-parameters = pika.URLParameters(os.environ.get('RABBITMQ'))
-connection = pika.BlockingConnection(parameters)
-channel = connection.channel()
-receive_queue_name = os.environ.get('RABBITMQ_QUEUE_BLOCK_PROCESSOR')
-send_queue_name = os.environ.get('RABBITMQ_QUEUE_BLOCK_WRITER')
-channel.queue_declare(queue=receive_queue_name, durable=True)
-channel.queue_declare(queue=send_queue_name, durable=True)
-
+# RabbitMQ communication
 
 def processQueueMessage(ch, method, properties, body: str):
     logger.info(f"Received message: {body}")
@@ -123,19 +114,32 @@ def processQueueMessage(ch, method, properties, body: str):
 
 
 def sendMessageToQueue(message: json):
-    channel.basic_publish(exchange='', routing_key=send_queue_name, body=json.dumps(message))
+    try:
+        channel.basic_publish(exchange='', routing_key=send_queue_name, body=json.dumps(message))
+    except Exception:
+        logger.info('Unable to send data to RabbitMQ')
 
 
-# Read messages from queue
-channel.basic_qos(prefetch_count=1)
-channel.basic_consume(queue=receive_queue_name, on_message_callback=processQueueMessage, auto_ack=False)
+channel = None
+while True:
+    try:
+        logger.info("Connecting to RabbitMQ")
+        parameters = pika.URLParameters(os.environ.get('RABBITMQ'))
+        connection = pika.BlockingConnection(parameters)
+        channel = connection.channel()
+        receive_queue_name = os.environ.get('RABBITMQ_QUEUE_BLOCK_PROCESSOR')
+        send_queue_name = os.environ.get('RABBITMQ_QUEUE_BLOCK_WRITER')
+        channel.queue_declare(queue=receive_queue_name, durable=True)
+        channel.queue_declare(queue=send_queue_name, durable=True)
 
+        # Read messages from queue
+        channel.basic_qos(prefetch_count=1)
+        channel.basic_consume(queue=receive_queue_name, on_message_callback=processQueueMessage, auto_ack=False)
 
-logger.info('Waiting messages...')
-try:
-    channel.start_consuming()
-except KeyboardInterrupt:
-    channel.stop_consuming()
+        logger.info('Waiting messages...')
+        channel.start_consuming()
 
-# Close connection
-connection.close()
+    except Exception as e:
+        logger.error(f'Problem with RabbitMQ {e}')
+        time.sleep(60)
+        continue

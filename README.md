@@ -7,8 +7,8 @@ Flow indexer is an first open-source data warehouse to provide application-speci
 
 # Features
 
-- Real-time data (20 seconds delay max in the appearance of a block in the database)
-- High-speed extraction (up to 3000 blocks per hour for 1 instance with 1CPU and 150MB RAM)
+- Real-time data (20 seconds maximum delay for a bloc to appear in the database)
+- High-speed extraction (up to 3000 blocks per hour for 1 instance with 1CPU and 200MB RAM)
 - High-scalability (100 instances can process 300K million blocks per hour).
 - High-speed access to extracted data (up to 10 thousands rows per second)
 - Docker-compose in-house setup in 5 seconds
@@ -23,7 +23,7 @@ Flow indexer is an first open-source data warehouse to provide application-speci
 - BlockSensors: 1cpu, 200MB
 - BlockProcessor: 1-100cpu, 200MB
 - IndexerFramework: 1cpu, 500MB
-- Postgresql:1cpu, 1GB
+- PostgreSQL: 1cpu, 1GB
 - RabbitMQ: 1cpu, 300MB
 
 You need own RPC-node **in archive mode**.
@@ -101,24 +101,27 @@ cp .env.sample .env
 
 RPC_URI=wss://rpc.polkadot.io/
 
-3) Start docker containers
+3) Specify block id which from whuich you want to start sync. For ex:
+
+START_BLOCK_ID=56000000
+
+4) Start docker containers
 
 docker-compose up -d
 ```
 
-Then whole blocks sync begins.
+# Scalability
 
-Sync process continues for a few days (about 1M blocks/day for 1 instance of BlockProcessor)
+If you want to run 30 Block Processor instances then run it like
+
+```
+docker-compose up -d --scale flow_block_processor=30
+```
+
 
 # REST API
 
 To monitor streamer status, you can use API on 3000 port
-
-**API is protected with Basic Auth:**
-
-user: `admin`
-
-password: `password` as REST_API_BASIC_AUTH_PASSWORD in .env
 
 ## API methods
 
@@ -126,17 +129,15 @@ password: `password` as REST_API_BASIC_AUTH_PASSWORD in .env
 
 [http://0.0.0.0:3000/metrics](http://0.0.0.0:3000/metrics) - prometheus metrics for Grafana
 
-[http://0.0.0.0:3000/pause](http://0.0.0.0:3000/pause) - pause blocks sync
+[http://0.0.0.0:3000/blocks/pause](http://0.0.0.0:3000/blocks/pause) - pause blocks sync
 
-[http://0.0.0.0:3000/resume](http://0.0.0.0:3000/resume) - resume blocks sync
+[http://0.0.0.0:3000/blocks/resume](http://0.0.0.0:3000/blocks/resume) - resume blocks sync
 
-[http://0.0.0.0:3000/restart-unporcessed-blocks](http://0.0.0.0:3000/restart-unprocessed-blocks) - if there were some problems with blocks data extraction, then maybe you need to increase memory of the BlockProcessor and call this method for restart extraction of all unprocessed blocks
+[http://0.0.0.0:3000/blocks/restart-unporcessed](http://0.0.0.0:3000/blocks/restart-unprocessed) - if there were some problems with blocks data extraction, then maybe you need to increase memory of the BlockProcessor instance and call this method for restart extraction of all unprocessed blocks
 
-[http://0.0.0.0:3000/restart-unporcessed-eras](http://0.0.0.0:3000/restart-unprocessed-eras) - if there were some problems with staking info extraction for polkadot/kusama, then you can call this method for restart data collection for all unprocessed eras
+[http://0.0.0.0:3000/blocks/process/:blockId](http://0.0.0.0:3000/blocks/process/:blockId) - manually process blockId
 
-[http://0.0.0.0:3000/restart-unporcessed-rounds](http://0.0.0.0:3000/restart-unprocessed-rounds) - if there were some problems with staking info extraction for moonbeam/moonriver, then you can call this method for restart data collection for all unprocessed rounds
-
-[http://0.0.0.0:3000/process-block/:blockId](http://0.0.0.0:3000/status/1) - manually process blockId
+[http://0.0.0.0:3000/blocks/process/:startBlockId/:endBlockId](http://0.0.0.0:3000/blocks/process/:startBlockId/:endBlockId) - manually process of a range of blocks starting from startBlockId to endBlockId
 
 After preload completed, the streamer will switch to the finalized blocks listening.
 
@@ -147,10 +148,9 @@ After preload completed, the streamer will switch to the finalized blocks listen
 ```
 ├── db: schema to spin up postrges db
 ├── db-data: external docker volume for postgres data
-├── docker-compose.yml: defenition of all containers (db, BlockListener, BlockProcessor, StakingProcessor, etc)
-├── main
-│   ├── Dockerfile.dev: common docker rules for build the container for BlockListener, BlockProcessor, StaikingProcessor, erc
-│   ├── migrations: directory with files to apply db migrations 
+├── docker-compose.yml: defenition of all containers (DB, RabbitMQ, BlockSensors, BlockkProcessors, IndexerFramework, etc)
+├── framework: indexer framework for controll indexing process (language: TypeScript)
+│   ├── Dockerfile: common docker rules for build the Indexer FrameWork container
 │   └── src
 │       ├── index: main application
 │       ├── environment: environment defenition with default values
@@ -158,25 +158,26 @@ After preload completed, the streamer will switch to the finalized blocks listen
 │       │   ├── database: PosgreSQL initializer using knex library
 │       │   ├── express: Express initializer for Rest API
 │       │   ├── logger: Pino logger initializer
-│       │   ├── polkadotapi: Polkadot.js wrapper initializer
 │       │   ├── prometheus: Prometheus metrics initalizer for Grafana 
 │       │   └── rabbitmq: RabbitMQ queue intializer
 │       ├── models: database models 
-│       ├── libs: auxiliary libraries
-│       ├── modules
-│       │   ├── index: modules initializer depends MODE (specified in the docker-compose.yml)
-│       │   ├── BlockListener: initial preloader and finalized block processor
-│       │   │   ├── index: module initializer
-│       │   │   ├── controller: Rest API endpoints 
-│       │   │   ├── service: base module logic (initial preloader and finalized block processor)
-│       │   │   └── helpers
-│       │   │       ├── database: methods for get/save data in db
-│       │   │       └── polkadotjs: additional wrappers for polkadot
-│       │   ├── BlockProcessor: extract block, events, extrinsics data
-│       │   ├── PolkadotStakingProcessor: track validators/nominators and their rewards data for Polkadot/Kusama networks
-│       │   ├── MoonbeamStakingProcessor: track collators/delegators and their rewards data for Moonbeam/Moonriver networks
-│       │   ├── IdentityProcessor: processor to track account identities events
-│       │   └── GovernanceProcessor: track governance extrinsics and events data
+│       └── modules
+│           ├── index: modules initializer depends MODE (specified in the docker-compose.yml)
+│           ├── BlockListener: initial preloader and finalized block processor
+│           │   ├── index: module initializer
+│           │   ├── controller: Rest API endpoints 
+│           │   ├── service: base module logic (get message from BlockSensor check it and send to BlockProcessor queue)
+│           │   └── helpers
+│           │       └── database: methods for get/save data in db
+│           ├── BlockWriter: get block data structure from BlockProcessor and write it to DB
+│           └── Monitoring: check missing blocks and tasks
+└── src: main containers for fetch block data from RPC-node
+    ├── block-sensor: python module for fetch latest block height 
+    │   ├── Dockerfile: common docker rules for build the python container
+    │   └── sensor.py: get latest block height from RPC-node and send it to the rabbitmq queue
+    └── block-processor: python module for get block data, transactions and events from RPC-node
+        ├── Dockerfile: common docker rules for build the python container
+        └── processor.py: main script for get structured block data from RPC-node
 
 ```
 
@@ -201,56 +202,6 @@ Tables structre:
 - processing_metrics: This table stores information about the processing metrics, including delay_time_ms, process_time_ms, missed_count, duplicates_count, rpc_sync_diff_count, memory_usage_mb, not_processed_count and restart.
 
 
-
-## Workflow
-
-- **BlockListener**
-  - Preload all blocks before head and send them to the process_block RabbitMQ queue
-  - Listen for finalized blocks and send them to the process_block RabbitMQ queue
-- **BlockProcessor**
-  - Listen new messages in the process_block queue
-  - Get block data from chain
-  - Extract extrinsics and send them to the
-    - **Extrinsics Processor**
-      - Check if extrinsic successfull
-      - Recursive extract nested calls for the next extrinsic types
-        - multisig
-        - proxy
-        - batch
-      - form extrinsic model for DB
-  - Extract events and send them to the
-    - **Events Processor**
-      - Form event model for DB
-      - Check event name and if it's like EraPayout or NewRound, then send message to the process_staking queue
-  - Save block data in DB
-  - Save extrinsics data in DB
-  - Save events data in DB
-  - Send block data to the Event Bus
-  - If something fail, then rollback transaction
-- **StakingProcessor**
-  - Listen new messages in the process_staking queue
-  - Get block metadata from chain (session_id, active era, current era, epoch)
-  - Get active set of validators
-  - Get list of nominators for each validator
-  - Get data of stake and rewards for each validator and nominator
-  - Save era data in DB
-  - Save validators data in DB
-  - Save nominators data in DB
-  - If something fail, then rollback transaction
-- **Identity Processor**
-  - This processor creates account record in `account_identity` table and updates account identity info, listening to the identity change events.
-- **Governance Processor**
-  - This processor listen to the governance extrinsics and events and save data to the next tables:
-    - `council_proposal`
-    - `deemocracy_proposal`
-    - `democracy_referenda`
-    - `technical_committee_proposal`
-    - `tips`
-    - `treasury_proposal`
-    - `preimage`
-  - To reduce tables amount, we store this data slighlty denormalized, e.g. for proposals we store events such as `proposed`, `approved`, `executed` as well as `Votes` records from 'vote' extrinsics.
-
-
 ## Indexer SLI metrics for each ODS
 1. Speed
       - *delay_time_ms* - from appearing in the blockchain to being found in the database (milliseconds)
@@ -263,20 +214,3 @@ Tables structre:
       - *memory_usage_mb* - used memory for processing each task
       - *not_processed_count* - number of unprocessed tasks
       - *restart* - count of indexer restarts
-
-## Architecture diagram
-
-
-# How to add additional processor module
-
-To add an additional processor:
-
-- create new tables in DB to store processed data
-- add Knex models to the [models folder](./main/src/models)
-- create processor folder in the [modules folder](./main/src/modules)
-- add processor files similar to the other processors (index.ts, controller.ts, service.ts, helpers)
-- initialize processor in [modules folder](./main/src/modulse/index.ts)
-- add event name and queue in the tasks lib [tasks repository](./main/src/lib/tasks.repository.ts)
-- subscribe your processor hanlders on the target queue messages in [module service](./main/src/apps/modules/new_module/index.ts)
-
-

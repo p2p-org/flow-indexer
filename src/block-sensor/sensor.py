@@ -17,17 +17,17 @@ logger = pino(
 
 rpc_uri = os.environ.get("RPC_URI")
 queue_name = os.environ.get('RABBITMQ_QUEUE_BLOCK_SENSOR')
-channel=None
+channel = None
+
 
 def connectToRabbitMQ():
     global channel
-
     parameters = pika.URLParameters(os.environ.get('RABBITMQ'))
     try:
         connection = pika.BlockingConnection(parameters)
         channel = connection.channel()
         channel.queue_declare(queue=queue_name, durable=True)
-    except:
+    except Exception:
         logger.error("RabbitMQ connection problem")
 
 
@@ -36,12 +36,12 @@ def sendMessageToRabbitMQ(message: json):
 
     if channel is None:
         connectToRabbitMQ()
-    
-    try: 
+
+    try:
         channel.basic_publish(exchange='', routing_key=queue_name, body=json.dumps(message))
-    except:
+    except Exception:
         connectToRabbitMQ()
-        
+
 
 def fetchLastBlock():
     try:
