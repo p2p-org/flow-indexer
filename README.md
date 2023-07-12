@@ -34,21 +34,23 @@ Check the official guide: [https://docs.docker.com/engine/install/](https://docs
 
 ## Quick Start
 
+1. Create the .env file:
 ```
-1) Create .env file
+cp .env.sample .env
+```
 
-cp .env.sample .env 
-
-2) Specify RPC URL in .env file. Like
-
+2. Specify the RPC URL in the .env file. For example:
+```
 RPC_URI=https://rest-mainnet.onflow.org
+```
 
-3) Specify block id which from whuich you want to start sync. For ex:
-
+3. Specify the block ID from which you want to start the sync. For example:
+```
 START_BLOCK_ID=56000000
+```
 
-4) Start docker containers
-
+4. Start the Docker containers:
+```
 docker-compose up -d
 ```
 
