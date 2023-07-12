@@ -8,8 +8,8 @@ Flow indexer is an first open-source data warehouse to provide application-speci
 # Features
 
 - Real-time data (20 seconds maximum delay for a bloc to appear in the database)
-- High-speed extraction (up to 3000 blocks per hour for 1 instance with 1CPU and 200MB RAM)
-- High-scalability (100 instances can process 300K million blocks per hour).
+- High-speed extraction (up to 1000 blocks per hour for 1 instance with 1CPU and 200MB RAM)
+- High-scalability (100 instances can process 100K blocks per hour).
 - High-speed access to extracted data (up to 10 thousands rows per second)
 - Docker-compose in-house setup in 5 seconds
 
@@ -34,61 +34,7 @@ Docker service should be started first.
 
 ## Docker installation
 
-```
-1. Update package:
-
-sudo apt update
-
-2. Install package for HTTPS:
-
-sudo apt install apt-transport-https ca-certificates curl software-properties-common
-
-3. Add GPG-key for Docker:
-
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-
-4. Add repository for Docker:
-
-sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable"
-
-5. Update package:
-
-sudo apt update
-
-6. Switch to Docker repository and install:
-
-apt-cache policy docker-ce
-
-7. Install Docker:
-
-sudo apt install docker-ce
-
-8. Check installation:
-
-sudo systemctl status docker
-
-Output info:
-docker install ubuntu
-Docker install Ubuntu
-
-9. Check Docker image:
-
-docker run hello-world
-
-You must see «Hello from Docker!»
-
-10. Install docker compose
-
-sudo apt install docker-compose 
-
-11. Check docker-compose 
-
-docker-compose --version
-
-Output info:
-
-docker-compose version 1.20.1, build 1719ceb
-```
+Check the official guide: [https://docs.docker.com/engine/install/](https://docs.docker.com/engine/install/)
 
 # Quick Start
 
@@ -99,7 +45,7 @@ cp .env.sample .env
 
 2) Specify RPC URL in .env file. Like
 
-RPC_URI=wss://rpc.polkadot.io/
+RPC_URI=https://rest-mainnet.onflow.org
 
 3) Specify block id which from whuich you want to start sync. For ex:
 
@@ -181,9 +127,14 @@ After preload completed, the streamer will switch to the finalized blocks listen
 
 ```
 
+## Architecture diagram
+
+![Architecture diagram](./docs/arch.png)
+
+
 ## Database structure
 
-DB shema is desribed in ./db directory
+DB shema is described in [./db/init.sql](./db/init.sql) 
 
 It is used as entrypoint SQL when Postgres started by ./db/Dockerfile from ./docker-compose.yml
 
@@ -202,7 +153,7 @@ Tables structre:
 - processing_metrics: This table stores information about the processing metrics, including delay_time_ms, process_time_ms, missed_count, duplicates_count, rpc_sync_diff_count, memory_usage_mb, not_processed_count and restart.
 
 
-## Indexer SLI metrics for each ODS
+## Indexer SLI metrics
 1. Speed
       - *delay_time_ms* - from appearing in the blockchain to being found in the database (milliseconds)
       - *process_time_ms* - block processing time (milliseconds)      
