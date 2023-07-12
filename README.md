@@ -152,28 +152,14 @@ Please refer to the [./db/init.sql](./db/init.sql)  file for the detailed schema
 
 These metrics provide insights into the speed, data quality, and system performance of the indexer.
 
-1. Speed
-      - *delay_time_ms* - from appearing in the blockchain to being found in the database (milliseconds)
-      - *process_time_ms* - block processing time (milliseconds)      
-2. Data quality
-      - *missed_count* - number of missed blocks
-      - *duplicates_count* - number of duplicates records
-      - *rpc_sync_diff_count* - diff between RPC and database
-3. System
-      - *memory_usage_mb* - used memory for processing each task
-      - *not_processed_count* - number of unprocessed tasks
-      - *restart* - count of indexer restarts
-
 1. Speed:
-- delay_time_ms: The time it takes for a block to appear in the blockchain and be found in the database, measured in milliseconds.
-- process_time_ms: The time it takes to process a block, measured in milliseconds.
-
+      - *delay_time_ms*: The time it takes for a block to appear in the blockchain and be found in the database, measured in milliseconds.
+      - *process_time_ms*: The time it takes to process a block, measured in milliseconds.
 2. Data Quality:
-- missed_count: The number of missed blocks, indicating blocks that were not successfully processed or recorded.
-- duplicates_count: The number of duplicate records, indicating instances where the same data has been recorded multiple times.
-- rpc_sync_diff_count: The difference between the data in the RPC (Remote Procedure Call) and the data stored in the database.
-
+      - *missed_count*: The number of missed blocks, indicating blocks that were not successfully processed or recorded.
+      - *duplicates_count*: The number of duplicate records, indicating instances where the same data has been recorded multiple times.
+      - *rpc_sync_diff_count*: The difference between the data in the RPC (Remote Procedure Call) and the data stored in the database.
 3. System:
-- memory_usage_mb: The amount of memory used for processing each task, measured in megabytes.
-- not_processed_count: The number of unprocessed tasks, indicating tasks that have not been completed.
-- restart: The count of indexer restarts, indicating the number of times the indexer has been restarted.
+      - *memory_usage_mb*: The amount of memory used for processing each task, measured in megabytes.
+      - *not_processed_count*: The number of unprocessed tasks, indicating tasks that have not been completed.
+      - *restart*: The count of indexer restarts, indicating the number of times the indexer has been restarted.
