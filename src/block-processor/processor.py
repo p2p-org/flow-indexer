@@ -141,5 +141,5 @@ while True:
 
     except Exception as e:
         logger.error(f'Problem with RabbitMQ {e}')
-        time.sleep(60)
+        time.sleep(5)
         continue

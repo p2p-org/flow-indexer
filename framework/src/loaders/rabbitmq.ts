@@ -55,6 +55,7 @@ export const RabbitMQ = async (connectionString: string): Promise<Rabbit> => {
       return Promise.all([
         channel.assertQueue(QUEUES.BlocksSensor, { durable: true }),
         channel.assertQueue(QUEUES.BlocksProcessor, { durable: true }),
+        channel.assertQueue(QUEUES.BlocksWriter, { durable: true }),
         channel.prefetch(1),
       ])
     },
