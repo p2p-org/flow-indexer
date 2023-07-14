@@ -234,13 +234,7 @@ info:
 
 servers:
   - url: https://0.0.0.0:30000
-    description: Staking rewards API.
-
-paths:
-
-servers:
-  - url: https://staking-data-api-p2p.hasura.app/api/rest
-    description: Staking rewards API.
+    description: Framework Indexer Rest API
 
 paths:
   # Database entities
