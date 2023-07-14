@@ -21,61 +21,208 @@ info:
 #  x-logo:
 #    url: 'https://p2p.org/'
   title: |
-    Staking rewards API.
+    Flow Indexer
 
-    This doc describes how you can get data about staking rewards by different parameters in several POS chains.
+    
   description: |
     # Overview
     
-    This section provides an overview of the API design, methods, and supported use cases.
+    Flow Indexer is the first open-source data warehouse designed to provide application-specific data for the Flow blockchain. Its purpose is to reduce costs and simplify the process of building wallets, dashboards, explorers, and dApps that interact with Flow blockchain.
+    
+    # Features
 
-    Most of the endpoints accept `JSON` as input and return `JSON` responses.
-    This means that you must usually add the following headers to your request:
+    - Real-time data (with a maximum delay of 20 seconds for a block to appear in the database).
+    - High-speed extraction (up to 1000 blocks per hour for one instance with 1 CPU and 200MB RAM).
+    - High scalability (100 instances can process 100K blocks per hour).
+    - High-speed access to extracted data (up to 10 thousand rows per second).
+    - Docker-compose in-house setup in 5 seconds.
+
+    # Dependencies
+
+    - Docker
+    - Docker Compose
+
+    # Ram requirements
+
+    - BlockSensors: 1cpu, 200MB
+    - BlockProcessor: 1-100cpu, 200MB
+    - IndexerFramework: 1cpu, 500MB
+    - PostgreSQL: 1cpu, 1GB
+    - RabbitMQ: 1cpu, 300MB
+
+    # Installation
+
+    ## Docker installation
+
     ```
-    Content-type: application/json
-    Accept: application/json
+    1. Update package:
+
+    sudo apt update
+
+    2. Install package for HTTPS:
+
+    sudo apt install apt-transport-https ca-certificates curl software-properties-common
+
+    3. Add GPG-key for Docker:
+
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+
+    4. Add repository for Docker:
+
+    sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable"
+
+    5. Update package:
+
+    sudo apt update
+
+    6. Switch to Docker repository and install:
+
+    apt-cache policy docker-ce
+
+    7. Install Docker:
+
+    sudo apt install docker-ce
+
+    8. Check installation:
+
+    sudo systemctl status docker
+
+    Output info:
+    docker install ubuntu
+    Docker install Ubuntu
+
+    9. Check Docker image:
+
+    docker run hello-world
+
+    You must see «Hello from Docker!»
+
+    10. Install docker compose
+
+    sudo apt install docker-compose
+
+    11. Check docker-compose
+
+    docker-compose --version
+
+    Output info:
+
+    docker-compose version 1.20.1, build 1719ceb
     ```
 
-    # Trying the API
 
-    You can use a third party client, such as [curl](https://curl.haxx.se/), [HTTPie](https://httpie.org/),
-    [Postman](https://www.postman.com/) or [the Insomnia rest client](https://insomnia.rest/) to test
-    the Staking rewards API.
+    ## Quick Start
 
-    Note that you will need to pass credentials data.
-
-    For e.g., here is how to get blockchains list with [curl](https://p2p.staking.api/blockchains/list), when basic authorization is used:
-    ```bash
-    curl -X GET 'https://staking-data-api-p2p.hasura.app/api/rest/blockchains' \
-    -H 'Content-Type: application/json' \
-    -H 'x-hasura-admin-secret: secret' \
+    1. Create the .env file:
+    ```
+    cp .env.sample .env
     ```
 
-    # Authorization
+    2. Specify the RPC URL in the .env file. For example:
+    ```
+    RPC_URI=https://rest-mainnet.onflow.org
+    ```
 
-    Using `API key` header to interact with API.
+    3. Specify the block ID from which you want to start the sync. For example:
+    ```
+    START_BLOCK_ID=56000000
+    ```
 
-    Please request us for access.
+    4. Start the Docker containers:
+    ```
+    docker-compose up -d
+    ```
 
-    # Errors
+    ## Scalability
 
-    We follow the error response format proposed in [RFC 7807](https://tools.ietf.org/html/rfc7807)
-    also known as Problem Details for HTTP APIs. As with our normal API responses,
-    your client must be prepared to gracefully handle additional members of the response.
+    If you want to run 30 Block Processor instances then run it like
 
-    ## Unauthorized
+    ```
+    docker-compose up -d --scale flow_block_processor=30
+    ```
 
-    This indicates that the client request has not been completed because
-    it lacks valid authentication credentials for the requested resource. Please check that you have valid credentials.
+    
+    # Project structure
 
-    ## NotFound
+    ```
+    ├── db: Schema to set up a PostgreSQL database.
+    ├── db-data: External Docker volume for PostgreSQL data.
+    ├── docker-compose.yml: Definition of all containers (DB, RabbitMQ, BlockSensors, BlockProcessors, IndexerFramework, etc.).
+    ├── framework: Indexer framework for controlling the indexing process (language: TypeScript).
+    │   ├── Dockerfile: Common Docker rules for building the Indexer Framework container.
+    │   └── src
+    │       ├── index: Main application.
+    │       ├── environment: Environment definition with default values.
+    │       ├── loaders
+    │       │   ├── database: PostgreSQL initializer using the Knex library.
+    │       │   ├── express: Express initializer for the REST API.
+    │       │   ├── logger: Pino logger initializer.
+    │       │   ├── prometheus: Prometheus metrics initializer for Grafana.
+    │       │   └── rabbitmq: RabbitMQ queue initializer.
+    │       ├── models: Database models.
+    │       └── modules
+    │           ├── index: Modules initializer depending on the MODE (specified in docker-compose.yml).
+    │           ├── BlockListener: Initial preloader and finalized block processor.
+    │           │   ├── index: Module initializer.
+    │           │   ├── controller: REST API endpoints.
+    │           │   ├── service: Base module logic (get message from BlockSensor, check it, and send it to BlockProcessor queue).
+    │           │   └── helpers
+    │           │       └── database: Methods for getting/saving data in the database.
+    │           ├── BlockWriter: Get block data structure from BlockProcessor and write it to the database.
+    │           └── Monitoring: Check missing blocks and tasks.
+    └── src: Main containers for fetching block data from the RPC node.
+        ├── block-sensor: Python module for fetching the latest block height.
+        │   ├── Dockerfile: Common Docker rules for building the Python container.
+        │   └── sensor.py: Get the latest block height from the RPC node and send it to the RabbitMQ queue.
+        └── block-processor: Python module for getting block data, transactions, and events from the RPC node.
+            ├── Dockerfile: Common Docker rules for building the Python container.
+            └── processor.py: Main script for getting structured block data from the RPC node.
+    ```
 
-    This client error response indicates that the server cannot find the requested resource.
 
-    ## Unknown (Internal Server Error)
+    # Architecture diagram
 
-    This means that the server encountered an unexpected condition that prevented it from
-    fulfilling the request.
+    ![Architecture diagram](https://raw.githubusercontent.com/p2p-org/flow-indexer/main/docs/arch.png)
+
+
+    # Database structure
+
+    The database schema is described in the  [./db/init.sql](./db/init.sql). This file is used as the entrypoint SQL when Postgres is started using the ./db/Dockerfile defined in the ./docker-compose.yml file.
+
+    The schema includes the following tables:
+
+    - blocks: This table stores information about blocks, including block height, block ID, parent ID, block time, and parent voter signature.
+
+    - events: This table stores information about events, including block height, event ID, transaction ID, transaction index, event index, type, and payload.
+
+    - transactions: This table stores information about extrinsics, including block height, block ID, transaction ID, script, arguments, reference block ID, gas limit, payer, proposal key, authorizers, payload signatures, envelope signatures, execution, status, status code, error message, and computation used.
+
+    - processing_tasks: This table stores information about processing tasks, including network ID, entity, entity ID, status, collection unique ID, start time, finish time, data, attempts, and a unique identifier (row_id).
+
+    - processing_state: This table stores information about the processing state, including network ID, entity, entity ID, and a unique identifier (row_id). It also has a constraint to ensure a unique combination of entity and network ID.
+
+    - processing_metrics: This table stores information about processing metrics, including delay_time_ms, process_time_ms, missed_count, duplicates_count, rpc_sync_diff_count, memory_usage_mb, not_processed_count, and restart.
+
+    Please refer to the [./db/init.sql](./db/init.sql)  file for the detailed schema definition.
+
+
+    # Indexer SLI metrics
+
+    These metrics provide insights into the speed, data quality, and system performance of the indexer.
+
+    1. Speed:
+          - *delay_time_ms*: The time it takes for a block to appear in the blockchain and be found in the database, measured in milliseconds.
+          - *process_time_ms*: The time it takes to process a block, measured in milliseconds.
+    2. Data Quality:
+          - *missed_count*: The number of missed blocks, indicating blocks that were not successfully processed or recorded.
+          - *duplicates_count*: The number of duplicate records, indicating instances where the same data has been recorded multiple times.
+          - *rpc_sync_diff_count*: The difference between the data in the RPC (Remote Procedure Call) and the data stored in the database.
+    3. System:
+          - *memory_usage_mb*: The amount of memory used for processing each task, measured in megabytes.
+          - *not_processed_count*: The number of unprocessed tasks, indicating tasks that have not been completed.
+          - *restart*: The count of indexer restarts, indicating the number of times the indexer has been restarted.
+
+
 
   version: '0.1'
   license:
@@ -86,19 +233,15 @@ info:
     url: https://p2p.org
 
 servers:
-  - url: https://staking-data-api-p2p.hasura.app/api/rest
+  - url: https://0.0.0.0:30000
     description: Staking rewards API.
 
 paths:
-  # Database entities
-  /blockchains:
+  /health:
     get:
-      summary: List blockchains
+      summary: Indexer status
       description: |
-        Method returns the list of blockchains that are supported by API.
-        You can use this info for API endpoints which consist of `blockchain_name` in parameters.
-      operationId: getBlockchainsList
-      tags: [Blockchain]
+        responds with {"status":"live"} if the system is healthy
       responses:
         '200':
           description: Success.
@@ -113,16 +256,11 @@ paths:
         '500':
           $ref: '#/components/responses/Unknown'
 
-  /blockchains/{blockchain_name}/periods:
+  /metrics:
     get:
-      summary: Blockchains periods
+      summary: Prometheus metric
       description: |
-        This method returns the acceptable periods of `blockchain_period` for staking data.
-        You can use this info for API endpoints which consist of `blockchain_period_name` in parameters.
-      operationId: getBlockchainsPeriods
-      tags: [ Blockchain ]
-      parameters:
-        - $ref: '#/components/parameters/BlockchainName'
+        Provides Prometheus metrics for Grafana
       responses:
         '200':
           description: Success.
@@ -141,8 +279,7 @@ paths:
     get:
       summary: Blockchains on-chain report
       description: |
-        This method returns the blockchain staking data for every defined blockchain period
-        (specified period of rewards payment and stat collection, can be `block` `era` `epoch` `day` depends on chain)
+        Provides Prometheus metrics for Grafana
       operationId: getBlockchainsReports
       tags: [ Blockchain ]
       parameters:
