@@ -21,208 +21,61 @@ info:
 #  x-logo:
 #    url: 'https://p2p.org/'
   title: |
-    Flow Indexer
+    Staking rewards API.
 
-    
+    This doc describes how you can get data about staking rewards by different parameters in several POS chains.
   description: |
     # Overview
     
-    Flow Indexer is the first open-source data warehouse designed to provide application-specific data for the Flow blockchain. Its purpose is to reduce costs and simplify the process of building wallets, dashboards, explorers, and dApps that interact with Flow blockchain.
-    
-    # Features
+    This section provides an overview of the API design, methods, and supported use cases.
 
-    - Real-time data (with a maximum delay of 20 seconds for a block to appear in the database).
-    - High-speed extraction (up to 1000 blocks per hour for one instance with 1 CPU and 200MB RAM).
-    - High scalability (100 instances can process 100K blocks per hour).
-    - High-speed access to extracted data (up to 10 thousand rows per second).
-    - Docker-compose in-house setup in 5 seconds.
-
-    # Dependencies
-
-    - Docker
-    - Docker Compose
-
-    # Ram requirements
-
-    - BlockSensors: 1cpu, 200MB
-    - BlockProcessor: 1-100cpu, 200MB
-    - IndexerFramework: 1cpu, 500MB
-    - PostgreSQL: 1cpu, 1GB
-    - RabbitMQ: 1cpu, 300MB
-
-    # Installation
-
-    ## Docker installation
-
+    Most of the endpoints accept `JSON` as input and return `JSON` responses.
+    This means that you must usually add the following headers to your request:
     ```
-    1. Update package:
-
-    sudo apt update
-
-    2. Install package for HTTPS:
-
-    sudo apt install apt-transport-https ca-certificates curl software-properties-common
-
-    3. Add GPG-key for Docker:
-
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-
-    4. Add repository for Docker:
-
-    sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable"
-
-    5. Update package:
-
-    sudo apt update
-
-    6. Switch to Docker repository and install:
-
-    apt-cache policy docker-ce
-
-    7. Install Docker:
-
-    sudo apt install docker-ce
-
-    8. Check installation:
-
-    sudo systemctl status docker
-
-    Output info:
-    docker install ubuntu
-    Docker install Ubuntu
-
-    9. Check Docker image:
-
-    docker run hello-world
-
-    You must see «Hello from Docker!»
-
-    10. Install docker compose
-
-    sudo apt install docker-compose
-
-    11. Check docker-compose
-
-    docker-compose --version
-
-    Output info:
-
-    docker-compose version 1.20.1, build 1719ceb
+    Content-type: application/json
+    Accept: application/json
     ```
 
+    # Trying the API
 
-    ## Quick Start
+    You can use a third party client, such as [curl](https://curl.haxx.se/), [HTTPie](https://httpie.org/),
+    [Postman](https://www.postman.com/) or [the Insomnia rest client](https://insomnia.rest/) to test
+    the Staking rewards API.
 
-    1. Create the .env file:
-    ```
-    cp .env.sample .env
-    ```
+    Note that you will need to pass credentials data.
 
-    2. Specify the RPC URL in the .env file. For example:
-    ```
-    RPC_URI=https://rest-mainnet.onflow.org
-    ```
-
-    3. Specify the block ID from which you want to start the sync. For example:
-    ```
-    START_BLOCK_ID=56000000
+    For e.g., here is how to get blockchains list with [curl](https://p2p.staking.api/blockchains/list), when basic authorization is used:
+    ```bash
+    curl -X GET 'https://staking-data-api-p2p.hasura.app/api/rest/blockchains' \
+    -H 'Content-Type: application/json' \
+    -H 'x-hasura-admin-secret: secret' \
     ```
 
-    4. Start the Docker containers:
-    ```
-    docker-compose up -d
-    ```
+    # Authorization
 
-    ## Scalability
+    Using `API key` header to interact with API.
 
-    If you want to run 30 Block Processor instances then run it like
+    Please request us for access.
 
-    ```
-    docker-compose up -d --scale flow_block_processor=30
-    ```
+    # Errors
 
-    
-    # Project structure
+    We follow the error response format proposed in [RFC 7807](https://tools.ietf.org/html/rfc7807)
+    also known as Problem Details for HTTP APIs. As with our normal API responses,
+    your client must be prepared to gracefully handle additional members of the response.
 
-    ```
-    ├── db: Schema to set up a PostgreSQL database.
-    ├── db-data: External Docker volume for PostgreSQL data.
-    ├── docker-compose.yml: Definition of all containers (DB, RabbitMQ, BlockSensors, BlockProcessors, IndexerFramework, etc.).
-    ├── framework: Indexer framework for controlling the indexing process (language: TypeScript).
-    │   ├── Dockerfile: Common Docker rules for building the Indexer Framework container.
-    │   └── src
-    │       ├── index: Main application.
-    │       ├── environment: Environment definition with default values.
-    │       ├── loaders
-    │       │   ├── database: PostgreSQL initializer using the Knex library.
-    │       │   ├── express: Express initializer for the REST API.
-    │       │   ├── logger: Pino logger initializer.
-    │       │   ├── prometheus: Prometheus metrics initializer for Grafana.
-    │       │   └── rabbitmq: RabbitMQ queue initializer.
-    │       ├── models: Database models.
-    │       └── modules
-    │           ├── index: Modules initializer depending on the MODE (specified in docker-compose.yml).
-    │           ├── BlockListener: Initial preloader and finalized block processor.
-    │           │   ├── index: Module initializer.
-    │           │   ├── controller: REST API endpoints.
-    │           │   ├── service: Base module logic (get message from BlockSensor, check it, and send it to BlockProcessor queue).
-    │           │   └── helpers
-    │           │       └── database: Methods for getting/saving data in the database.
-    │           ├── BlockWriter: Get block data structure from BlockProcessor and write it to the database.
-    │           └── Monitoring: Check missing blocks and tasks.
-    └── src: Main containers for fetching block data from the RPC node.
-        ├── block-sensor: Python module for fetching the latest block height.
-        │   ├── Dockerfile: Common Docker rules for building the Python container.
-        │   └── sensor.py: Get the latest block height from the RPC node and send it to the RabbitMQ queue.
-        └── block-processor: Python module for getting block data, transactions, and events from the RPC node.
-            ├── Dockerfile: Common Docker rules for building the Python container.
-            └── processor.py: Main script for getting structured block data from the RPC node.
-    ```
+    ## Unauthorized
 
+    This indicates that the client request has not been completed because
+    it lacks valid authentication credentials for the requested resource. Please check that you have valid credentials.
 
-    # Architecture diagram
+    ## NotFound
 
-    ![Architecture diagram](https://raw.githubusercontent.com/p2p-org/flow-indexer/main/docs/arch.png)
+    This client error response indicates that the server cannot find the requested resource.
 
+    ## Unknown (Internal Server Error)
 
-    # Database structure
-
-    The database schema is described in the  [./db/init.sql](./db/init.sql). This file is used as the entrypoint SQL when Postgres is started using the ./db/Dockerfile defined in the ./docker-compose.yml file.
-
-    The schema includes the following tables:
-
-    - blocks: This table stores information about blocks, including block height, block ID, parent ID, block time, and parent voter signature.
-
-    - events: This table stores information about events, including block height, event ID, transaction ID, transaction index, event index, type, and payload.
-
-    - transactions: This table stores information about extrinsics, including block height, block ID, transaction ID, script, arguments, reference block ID, gas limit, payer, proposal key, authorizers, payload signatures, envelope signatures, execution, status, status code, error message, and computation used.
-
-    - processing_tasks: This table stores information about processing tasks, including network ID, entity, entity ID, status, collection unique ID, start time, finish time, data, attempts, and a unique identifier (row_id).
-
-    - processing_state: This table stores information about the processing state, including network ID, entity, entity ID, and a unique identifier (row_id). It also has a constraint to ensure a unique combination of entity and network ID.
-
-    - processing_metrics: This table stores information about processing metrics, including delay_time_ms, process_time_ms, missed_count, duplicates_count, rpc_sync_diff_count, memory_usage_mb, not_processed_count, and restart.
-
-    Please refer to the [./db/init.sql](./db/init.sql)  file for the detailed schema definition.
-
-
-    # Indexer SLI metrics
-
-    These metrics provide insights into the speed, data quality, and system performance of the indexer.
-
-    1. Speed:
-          - *delay_time_ms*: The time it takes for a block to appear in the blockchain and be found in the database, measured in milliseconds.
-          - *process_time_ms*: The time it takes to process a block, measured in milliseconds.
-    2. Data Quality:
-          - *missed_count*: The number of missed blocks, indicating blocks that were not successfully processed or recorded.
-          - *duplicates_count*: The number of duplicate records, indicating instances where the same data has been recorded multiple times.
-          - *rpc_sync_diff_count*: The difference between the data in the RPC (Remote Procedure Call) and the data stored in the database.
-    3. System:
-          - *memory_usage_mb*: The amount of memory used for processing each task, measured in megabytes.
-          - *not_processed_count*: The number of unprocessed tasks, indicating tasks that have not been completed.
-          - *restart*: The count of indexer restarts, indicating the number of times the indexer has been restarted.
-
-
+    This means that the server encountered an unexpected condition that prevented it from
+    fulfilling the request.
 
   version: '0.1'
   license:
@@ -233,22 +86,24 @@ info:
     url: https://p2p.org
 
 servers:
-  - url: https://0.0.0.0:30000
+  - url: https://staking-data-api-p2p.hasura.app/api/rest
     description: Staking rewards API.
 
 paths:
+  # Database entities
   /health:
     get:
-      summary: Indexer status
+      summary: Check indexer health
       description: |
-        responds with {"status":"live"} if the system is healthy
+        responds with {"status":"live"} if the system is healthy.      
+      tags: [ System ]
       responses:
         '200':
           description: Success.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BlockchainCollection'
+                $ref: '#/components/schemas/Health'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '404':
@@ -258,16 +113,17 @@ paths:
 
   /metrics:
     get:
-      summary: Prometheus metric
+      summary: Prometheus metrics
       description: |
-        Provides Prometheus metrics for Grafana
+        Provides Prometheus metrics for Grafana.
+      tags: [ System ]
       responses:
         '200':
           description: Success.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BlockchainPeriodCollection'
+                $ref: '#/components/schemas/Metrics'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '404':
@@ -275,25 +131,19 @@ paths:
         '500':
           $ref: '#/components/responses/Unknown'
 
-  /blockchains/{blockchain_name}/report:
+  /blocks/pause:
     get:
-      summary: Blockchains on-chain report
+      summary: Pauses indexer
       description: |
-        Provides Prometheus metrics for Grafana
-      operationId: getBlockchainsReports
-      tags: [ Blockchain ]
-      parameters:
-        - $ref: '#/components/parameters/BlockchainName'
-        - $ref: '#/components/parameters/FilterExecutionDateFrom'
-        - $ref: '#/components/parameters/FilterExecutionDateTo'
-        - $ref: '#/components/parameters/PeriodCount'
+        Pauses blocks synchronization.
+      tags: [ Blocks ]
       responses:
         '200':
           description: Success.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BlockchainReportCollection'
+                $ref: '#/components/schemas/BlocksPause'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '404':
@@ -301,52 +151,19 @@ paths:
         '500':
           $ref: '#/components/responses/Unknown'
 
-  /blockchains/{blockchain_name}/validators:
+  /blocks/resume:
     get:
-      summary: List validators
-      description: Get the list of active validators per period.
-      operationId: getValidatorsList
-      tags: [ Validators ]
-      parameters:
-        - $ref: '#/components/parameters/BlockchainName'
-        - $ref: '#/components/parameters/FilterExecutionDateFrom'
-        - $ref: '#/components/parameters/FilterExecutionDateTo'
-        - $ref: '#/components/parameters/PeriodCount'
-      responses:
-        '200':
-          description: Success.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidatorCollection'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/Unknown'
-
-  /blockchains/{blockchain_name}/validators/report:
-    get:
-      summary: Validators on-chain report
+      summary: Resumes indexer
       description: |
-        This method returns the blockchain staking data for every defined blockchain period
-        per every validator that was active.
-      operationId: getValidatorsReport
-      tags: [ Validators ]
-      parameters:
-        - $ref: '#/components/parameters/BlockchainName'
-        - $ref: '#/components/parameters/FilterExecutionDateFrom'
-        - $ref: '#/components/parameters/FilterExecutionDateTo'
-        - $ref: '#/components/parameters/PeriodCount'
-        - $ref: '#/components/parameters/ValidatorAddress'
+        Resumes blocks synchronization.
+      tags: [ Blocks ]
       responses:
         '200':
           description: Success.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ValidatorReportCollection'
+                $ref: '#/components/schemas/BlocksResume'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '404':
@@ -354,24 +171,21 @@ paths:
         '500':
           $ref: '#/components/responses/Unknown'
 
-  /blockchains/{blockchain_name}/delegators:
+  /blocks/restart-unporcessed:
     get:
-      summary: List delegators
-      description: Get the list of active delegators per period.
-      operationId: getDelegatorsList
-      tags: [ Delegators ]
-      parameters:
-        - $ref: '#/components/parameters/BlockchainName'
-        - $ref: '#/components/parameters/FilterExecutionDateFrom'
-        - $ref: '#/components/parameters/FilterExecutionDateTo'
-        - $ref: '#/components/parameters/PeriodCount'
+      summary: Restart unprocessed blocks
+      description: |
+        Restarts the extraction of all unprocessed blocks. 
+        Increase the memory of the BlockProcessor instance before calling
+        this method if there were problems with block data extraction.
+      tags: [ Blocks ]
       responses:
         '200':
           description: Success.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DelegatorCollection'
+                $ref: '#/components/schemas/BlocksRestartUnprocessed'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '404':
@@ -379,25 +193,21 @@ paths:
         '500':
           $ref: '#/components/responses/Unknown'
 
-  /blockchains/{blockchain_name}/delegators/report:
+  /blocks/process/{blockId}:
     get:
-      summary: Delegators on-chain report
-      description: Get delegator on-chain report.
-      operationId: getDelegatorsReport
-      tags: [ Delegators ]
+      summary: Process specified block
+      description: |
+        Manually processes the specified blockId.
+      tags: [ Blocks ]
       parameters:
-        - $ref: '#/components/parameters/BlockchainName'
-        - $ref: '#/components/parameters/FilterExecutionDateFrom'
-        - $ref: '#/components/parameters/FilterExecutionDateTo'
-        - $ref: '#/components/parameters/PeriodCount'
-        - $ref: '#/components/parameters/BlockchainUserAddress'
+        - $ref: '#/components/parameters/BlockId'
       responses:
         '200':
           description: Success.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DelegatorReportCollection'
+                $ref: '#/components/schemas/BlocksProcess'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '404':
@@ -405,21 +215,22 @@ paths:
         '500':
           $ref: '#/components/responses/Unknown'
 
-  /deposits/{deposit_address}/apr:
+  /blocks/process/{startBlockId}/{endBlockId}:
     get:
-      summary: APR
-      description: Get APR for given deposit address.
-      operationId: getAprForDepositAddress
-      tags: [ Delegators ]
+      summary: Process specified blocks range
+      description: |
+        Manually processes a range of blocks from startBlockId to endBlockId.
+      tags: [ Blocks ]
       parameters:
-        - $ref: '#/components/parameters/DepositAddress'
+        - $ref: '#/components/parameters/StartBlockId'
+        - $ref: '#/components/parameters/EndBlockId'
       responses:
         '200':
           description: Success.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DelegatorAprCollection'
+                $ref: '#/components/schemas/BlocksProcessRange'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '404':
@@ -427,564 +238,77 @@ paths:
         '500':
           $ref: '#/components/responses/Unknown'
 
-  /deposits/{deposit_address}/total_rewards:
-    get:
-      summary: Rewards
-      description: Get total rewards for given deposit address.
-      operationId: getTotalRewardsForDepositAddress
-      tags: [ Delegators ]
-      parameters:
-        - $ref: '#/components/parameters/DepositAddress'
-      responses:
-        '200':
-          description: Success.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DelegatorTotalRewardsCollection'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/Unknown'
+
 
 components:
   # Reusable schemas (data models)
   schemas:
     # Database entities
-    BlockchainCollectionItem:
+    Health:
       description: >
-        Blockchain collection item.
+        System healh status
 
       type: object
-      example: [
-        { blockchain_name: Ethereum, ecosystem_name: "Ethereum ecosystem" },
-        { blockchain_name: Polkadot, ecosystem_name: "Polkadot ecosystem" },
-        { blockchain_name: Kusama, ecosystem_name: "Polkadot ecosystem" }
-      ]
+      example: { status: "live" }
       properties:
-        blockchain_name:
+        status:
           type: string
-          example: "Ethereum"
-          description: The name of the blockchain.
-        ecosystem_name:
-          type: string
-          example: "Ethereum ecosystem"
-          description: The name of Ecosystem.
+          example: "live"
 
-    BlockchainPeriodCollectionItem:
+    Metrics:
       description: >
-        BlockchainPeriod collection item.
-
+        Prometheus metrics
       type: object
       properties:
-        blockchain_name:
+        status:
           type: string
-          example: "Polkadot"
-          description: The name of the blockchain.
-        ecosystem_name:
-          type: string
-          example: "Polkadot ecosystem"
-          description: The name of Ecosystem.
-        blockchain_period_name:
-          type: string
-          enum:
-            - era
-            - block
-            - epoch
-          example: "era"
-          description: The name of period that rewards and other stat are collected by the API.
+          example: success
 
-    BlockchainReportCollectionItem:
+    BlocksPause:
       description: >
-        BlockchainReport collection item.
-
+        Status of pausing the indexer
       type: object
       properties:
-        blockchain_name:
+        status:
           type: string
-          example: "Polkadot"
-          description: The name of the blockchain.
-        ecosystem_name:
-          type: string
-          example: "Polkadot ecosystem"
-          description: The name of Ecosystem.
-        blockchain_period_name:
-          type: string
-          enum:
-            - era
-            - block
-            - epoch
-          example: "era"
-          description: The name of period that rewards and other stat are collected by the API.
-        blockchain_period_num:
-          type: string
-          example: "946"
-          description: |
-            The value of blockchain_period
-            (number in case of `era` `epoc` `block` and the day in case of point in time).
-        datetime_from:
-          type: string
-          example: "2023-01-04 15:36:18.014000"
-          format: datetime
-          description: The start of period (blockchain_period).
-        datetime_to:
-          type: string
-          example: "2023-01-05 15:36:18.011000"
-          format: datetime
-          description: The end of period (blockchain_period).
-        blockchain_total_rewards:
-          type: string
-          example: "241225.0405479788"
-          description: All rewards that were paid for the current period (blockchain_period).
-        reward_coingecoid:
-          type: string
-          example: "polkadot"
-          description: Token id in coingecko for rewards.
-        blockchain_total_stake:
-          type: string
-          example: "504346062.64968455"
-          description: Total stake for the current period (blockchain_period).
-        stake_coingecoide:
-          type: string
-          example: "polkadot"
-          description: Token id in coingecko for stake.
-        delegators_num:
-          type: string
-          example: "20241"
-          description: The number of delegators (stakers) for the current period (blockchain_period).
-        validators_num:
-          type: string
-          example: "297"
-          description: The number of validators for the current period (blockchain_period).
+          example: success
 
-    ValidatorCollectionItem:
+    BlocksResume:
       description: >
-        Validator collection item.
-
+        Status of resuming the indexer
       type: object
       properties:
-        blockchain_name:
+        status:
           type: string
-          example: "Polkadot"
-          description: The name of the blockchain.
-        ecosystem_name:
-          type: string
-          example: "Polkadot ecosystem"
-          description: The name of Ecosystem.
-        blockchain_period_name:
-          type: string
-          enum:
-            - era
-            - block
-            - epoch
-          example: "era"
-          description: The name of period that rewards and other stat are collected by the API.
-        blockchain_period_num:
-          type: string
-          example: "946"
-          description: |
-            The value of blockchain_period
-            (number in case of `era` `epoc` `block` and the day in case of point in time).
-        datetime_from:
-          type: string
-          example: "2023-01-04 15:36:18.014000"
-          format: datetime
-          description: The start of period (blockchain_period).
-        datetime_to:
-          type: string
-          example: "2023-01-05 15:36:18.011000"
-          format: datetime
-          description: The end of period (blockchain_period).
-        validators_addresses:
-          type: array
-          example: [
-            {"validator_address": "12eZSMk8GJYE2Lq943dSEnMUoZs1ek7jU8QN3rEA1yPZPjcR"},
-            {"validator_address": "12pgR5dyEkUP6iTR9u7b74Nz7uCsCYKpkFfA5LFbQPjGwNHL"}
-          ]
-          items:
-            type: string
-          description: The list of validator addresses participated in staking for specific blockchain and specific period.
+          example: success
 
-    ValidatorReportCollectionItem:
+    BlocksRestartUnprocessed:
       description: >
-        Validator collection item.
-
+        Status of restart unprocessed blocks
       type: object
       properties:
-        blockchain_name:
+        status:
           type: string
-          example: "Polkadot"
-          description: The name of the blockchain.
-        ecosystem_name:
-          type: string
-          example: "Polkadot ecosystem"
-          description: The name of Ecosystem.
-        blockchain_period_name:
-          type: string
-          enum:
-            - era
-            - block
-            - epoch
-          example: "era"
-          description: The name of period that rewards and other stat are collected by the API.
-        blockchain_period_num:
-          type: string
-          example: "946"
-          description: |
-            The value of blockchain_period
-            (number in case of `era` `epoc` `block` and the day in case of point in time).
-        datetime_from:
-          type: string
-          example: "2023-01-04 15:36:18.014000"
-          format: datetime
-          description: The start of period (blockchain_period).
-        datetime_to:
-          type: string
-          example: "2023-01-05 15:36:18.011000"
-          format: datetime
-          description: The end of period (blockchain_period).
-        validators_addresses:
-          type: string
-          example: "14AkAFBzukRhAFh1wyko1ZoNWnUyq7bY1XbjeTeCHimCzPU1"
-          description: The public key of validator participated in staking for specific blockchain and specific period.
-        delegator_num :
-          type: string
-          example: "256"
-          description: The number of stakers for current validator during this period.
-        validator_fee:
-          type: string
-          example: "2.5"
-          description: The percentage of validator’s fee.
-        stake:
-          type: array
-          example: [
-            {type: clients_stake, amount: "2275343.5417242087", coingekoid: polkadot},
-            {type: self, amount: "0", coingekoid: polkadot}
-          ]
-          description: The array of stake info for validator.
-          items:
-            $ref: '#/components/schemas/StakeItem'
-        rewards:
-          type: array
-          example: [
-            { type: validator_fee, amount: "20.26669878544223", coingekoid: polkadot, period_payment_date: "2023-01-05 15:36:18.011000"}
-          ]
-          description: The array of validator’s rewards for this period.
-          items:
-            $ref: '#/components/schemas/RewardsItem'
+          example: success
 
-    DelegatorCollectionItem:
+    BlocksProcess:
       description: >
-        Delegator collection item.
-
+        Status of starting processing specified block
       type: object
       properties:
-        blockchain_name:
+        status:
           type: string
-          example: "Polkadot"
-          description: The name of the blockchain.
-        ecosystem_name:
-          type: string
-          example: "Polkadot ecosystem"
-          description: The name of Ecosystem.
-        blockchain_period_name:
-          type: string
-          enum:
-            - era
-            - block
-            - epoch
-          example: "era"
-          description: The name of period that rewards and other stat are collected by the API.
-        blockchain_period_num:
-          type: string
-          example: "1016"
-          description: |
-            The value of blockchain_period
-            (number in case of `era` `epoc` `block` and the day in case of point in time).
-        datetime_from:
-          type: string
-          example: "2023-03-14 15:36:18.014000"
-          format: datetime
-          description: The start of period (blockchain_period).
-        datetime_to:
-          type: string
-          example: "2023-03-15 15:36:18.011000"
-          format: datetime
-          description: The end of period (blockchain_period).
-        blockchain_user_address:
-          type: array
-          example: [
-            {"blockchain_user_address": "1BEV8SuBhtFYcXhwesJf9cePgpFjGzY58ybnb4yfrEAaBMx"},
-            {"blockchain_user_address": "1MUoG2n9WhmXUszhuQdyPeXSGg7MoVn8ZFaZnXyGyzs4wW1"}
-          ]
-          items:
-            type: string
-          description: The list of active delegator addresses.
+          example: success
 
-    DelegatorReportCollectionItem:
+    BlocksProcessRange:
       description: >
-        Delegator collection item.
-
+        Status of starting processing range of blocks
       type: object
       properties:
-        blockchain_name:
+        status:
           type: string
-          example: "Polkadot"
-          description: The name of the blockchain.
-        ecosystem_name:
-          type: string
-          example: "Polkadot ecosystem"
-          description: The name of Ecosystem.
-        blockchain_period_name:
-          type: string
-          enum:
-            - era
-            - block
-            - epoch
-          example: "era"
-          description: The name of period that rewards and other stat are collected by the API.
-        blockchain_period_num:
-          type: string
-          example: "946"
-          description: |
-            The value of blockchain_period
-            (number in case of `era` `epoc` `block` and the day in case of point in time).
-        datetime_from:
-          type: string
-          example: "2023-01-04 15:36:18.014000"
-          format: datetime
-          description: The start of period (blockchain_period).
-        datetime_to:
-          type: string
-          example: "2023-01-05 15:36:18.011000"
-          format: datetime
-          description: The end of period (blockchain_period).
-        blockchain_user_address:
-          type: string
-          example: "13YoPoKBvLrZM1avJBUMQ9Ccd8uC7D4y8dWNYeeXqpQQGEYP"
-          description: The public key of delegator.
-        stake:
-          type: array
-          example: [
-            {type: clients_stake, amount: "701.5", coingekoid: polkadot}
-          ]
-          description: The array of different types (if there are different types) of delegator’s stake for period.
-          items:
-            $ref: '#/components/schemas/DelegatorStakeItem'
-        rewards:
-          type: array
-          example: [
-            {
-              type: client_reward,
-              amount: "0.34437678615378675",
-              coingekoid: polkadot,
-              period_payment_date: "2023-01-05 15:36:18.011000",
-              validator_address: "153YD8ZHD9dRh82U419bSCB5SzWhbdAFzjj4NtA5pMazR2yC"
-            }
-          ]
-          description: The array of delegator’s rewards for this period.
-          items:
-            $ref: '#/components/schemas/DelegatorRewardsItem'
-
-    DelegatorAprCollectionItem:
-      description: >
-        Delegator APR item.
-
-      type: object
-      properties:
-        apr:
-          type: string
-          example: "4.7415101558088555"
-          description: The annual percentage rate.
-
-    DelegatorTotalRewardsCollectionItem:
-      description: >
-        Delegator total rewards item.
-
-      type: object
-      properties:
-        total_rewards:
-          type: string
-          example: "0.06417987100000008"
-          description: The total rewards.
-
-    StakeItem:
-      type: object
-      properties:
-        type:
-          type: string
-          description: "Type of stake: `self`/`client’s`."
-        amount:
-          type: string
-          description: The stake value.
-        coingekoid:
-          type: string
-          description: The coingecko id for stake token.
-
-    DelegatorStakeItem:
-      type: object
-      properties:
-        type:
-          type: string
-          description: Type of stake (if there are different types in specific blockchain).
-        amount:
-          type: string
-          description: Delegator’s stake for current period in tokens.
-        coingekoid:
-          type: string
-          description: The coingecko id for stake token.
-        validator_address:
-          type: string
-          description: The validator’s address that was affiliated with this stake.
-
-    RewardsItem:
-      type: object
-      properties:
-        type:
-          type: string
-          description: |
-            Type of rewards: fees from `clients`/`fix` rewards.
-            There are different types of rewards in some blockchains (eth has block’s rewards, attestation rewards …).
-            API will answer with rewards divided into types.
-        amount:
-          type: string
-          description: The reward value.
-        coingekoid:
-          type: string
-          description: The coingecko id for rewards token.
-        period_payment_date:
-          type: string
-          description: The date of payment for the staking rewards.
-
-    DelegatorRewardsItem:
-      type: object
-      properties:
-        type:
-          type: string
-          description: Type of reward (if there are different types in specific blockchain).
-        amount:
-          type: string
-          description: The reward value for current period in tokens.
-        coingekoid:
-          type: string
-          description: The coingecko id for rewards token.
-        period_payment_date:
-          type: string
-          description: The date of payment for the staking rewards.
-        validator_address:
-          type: string
-          description: The validator’s address that was affiliated with this reward.
-
-    BlockchainCollection:
-      type: object
-      description: |
-        Collection of blockchain.
-      allOf:
-        - type: object
-          properties:
-            blockchains:
-              type: array
-              items:
-                $ref: '#/components/schemas/BlockchainCollectionItem'
-
-    BlockchainPeriodCollection:
-      type: object
-      description: |
-        Collection of blockchain period.
-      allOf:
-        - type: object
-          properties:
-            blockchainPeriods:
-              type: array
-              items:
-                $ref: '#/components/schemas/BlockchainPeriodCollectionItem'
-
-    BlockchainReportCollection:
-      type: object
-      description: |
-        Collection of blockchain on-chain reports.
-      allOf:
-        - type: object
-          properties:
-            blockchainReports:
-              type: array
-              items:
-                $ref: '#/components/schemas/BlockchainReportCollectionItem'
-
-    ValidatorCollection:
-      type: object
-      description: |
-        Collection of validators.
-      allOf:
-        - type: object
-          properties:
-            validators:
-              type: array
-              items:
-                $ref: '#/components/schemas/ValidatorCollectionItem'
-
-    ValidatorReportCollection:
-      type: object
-      description: |
-        Collection of validators.
-      allOf:
-        - type: object
-          properties:
-            validatorReports:
-              type: array
-              items:
-                $ref: '#/components/schemas/ValidatorReportCollectionItem'
-
-    DelegatorCollection:
-      type: object
-      description: |
-        Collection of delegators.
-      allOf:
-        - type: object
-          properties:
-            delegators:
-              type: array
-              items:
-                $ref: '#/components/schemas/DelegatorCollectionItem'
-
-    DelegatorReportCollection:
-      type: object
-      description: |
-        Collection of validators.
-      allOf:
-        - type: object
-          properties:
-            delegatorReports:
-              type: array
-              items:
-                $ref: '#/components/schemas/DelegatorReportCollectionItem'
-
-    DelegatorAprCollection:
-      type: object
-      description: |
-        Collection of APR.
-      allOf:
-        - type: object
-          properties:
-            result:
-              type: array
-              items:
-                $ref: '#/components/schemas/DelegatorAprCollectionItem'
-
-    DelegatorTotalRewardsCollection:
-      type: object
-      description: |
-        Collection of total rewards.
-      allOf:
-        - type: object
-          properties:
-            result:
-              type: array
-              items:
-                $ref: '#/components/schemas/DelegatorTotalRewardsCollectionItem'
-
+          example: success
+          
     # Error response
     401ErrorCode:
       description: |
@@ -1062,114 +386,33 @@ components:
 
   # Reusable path, query, header and cookie parameters
   parameters:
-    # Pagination parameters
-    PageOffset:
-      in: query
-      name: offset
-      required: false
-      schema:
-        type: integer
-        minimum: 0
-      description: The number of items to skip before starting to collect the result set.
-
-    PageLimit:
-      in: query
-      name: limit
-      required: false
-      schema:
-        type: integer
-        default: 100
-      description: The numbers of items to return.
-
-    # Database entity fields
-    DepositAddress:
+   
+    BlockId:
       in: path
-      name: deposit_address
+      name: blockId
       schema:
-        type: string
+        type: number
       required: true
       description: |
-        The blockchain user address.
+        The block id
 
-    BlockchainName:
+    StartBlockId:
       in: path
-      name: blockchain_name
+      name: startBlockId
       schema:
-        type: string
+        type: number
       required: true
       description: |
-        The name of blockchain.
+        Start block Id
 
-    PeriodCount:
-      in: query
-      name: period_count
+    EndBlockId:
+      in: path
+      name: endBlockId
       schema:
-        type: string
-        default: 100
-      required: false
-      description: |
-        The number of last periods for data mart.
-
-    BlockchainPeriodName:
-      in: query
-      name: blockchain_period_name
-      schema:
-        type: string
-      required: false
-      description: |
-        The name of the period that rewards and other stat are collected by the API.
-        The list of acceptable params for specific blockchain can be requested by `Get blockchain periods` endpoint.
-
-    BlockchainPeriodNum:
-      in: query
-      name: blockchain_period_num
-      schema:
-        type: string
-        enum:
-          - era
-          - block
-          - epoch
-      required: false
-      description: The value of period.
-
-    ValidatorAddress:
-      in: query
-      name: validator_address
-      schema:
-        type: string
+        type: number
       required: true
-      description: Validator public key.
-
-    BlockchainUserAddress:
-      in: query
-      name: blockchain_user_address
-      schema:
-        type: string
-      required: true
-      description: Delegator public key.
-
-    # Filters
-    FilterExecutionDateFrom:
-      in: query
-      name: datetime_from
-      schema:
-        type: string
-        format: date-time
-        default: 2000-01-01 00:00:00
-      required: false
       description: |
-        The start date for query.
-
-    FilterExecutionDateTo:
-      in: query
-      name: datetime_to
-      schema:
-        type: string
-        format: date-time
-        default: 2100-01-01 00:00:00
-      required: false
-      description: |
-        The finish date for query.
+        End block Id
 
   # Reusable request bodies
   requestBodies: {}
@@ -1211,22 +454,8 @@ components:
   callbacks: {}
 
 
-  securitySchemes:
-    ApiKeyAuth:
-      type: apiKey
-      in: header
-      name: x-hasura-admin-secret
-
-# The API will provide support for plugins to support various authorization mechanisms.
-# Detailed information will be available in the plugin specification.
-security:
-  - ApiKeyAuth: []
-
 tags:
-  - name: Blockchain
-  - name: Validators
-  - name: Delegators
+  - name: System
+  - name: Blocks
 
 
-#externalDocs:
-#  url: https://p2p.staking.api/blockchains/

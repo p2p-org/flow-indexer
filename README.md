@@ -5,6 +5,10 @@
 
 Flow Indexer is the first open-source data warehouse designed to provide application-specific data for the Flow blockchain. Its purpose is to reduce costs and simplify the process of building wallets, dashboards, explorers, and dApps that interact with Flow blockchain.
 
+# Documentation
+
+Full documentation for the Flow Indexer can be found here. [https://flow-indexer.redoc.ly/](https://flow-indexer.redoc.ly/)
+
 # Features
 
 - Real-time data (with a maximum delay of 20 seconds for a block to appear in the database).
