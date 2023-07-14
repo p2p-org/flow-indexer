@@ -3,7 +3,7 @@
 
 # Introduction
 
-Flow Indexer is the first open-source data warehouse designed to provide application-specific data for the Flow blockchain. Its purpose is to reduce costs and simplify the process of building wallets, dashboards, explorers, and apps that interact with Flow blockchain.
+Flow Indexer is the first open-source data warehouse designed to provide application-specific data for the Flow blockchain. Its purpose is to reduce costs and simplify the process of building wallets, dashboards, explorers, and dApps that interact with Flow blockchain.
 
 # Features
 
