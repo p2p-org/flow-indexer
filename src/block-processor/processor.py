@@ -18,6 +18,10 @@ rpc_uri = os.environ.get("RPC_URI")
 
 
 def fetch_block_data(block_height: int):
+    """
+    Fetch block metadata, all block transactions and events from the Flow RPC node
+    """
+
     logger.info(f'Fetching block with height: {block_height}')
     try:
         response = requests.get(f'{rpc_uri}/v1/blocks?height={block_height}&expand=payload,execution_result')
@@ -104,6 +108,11 @@ def fetch_block_data(block_height: int):
 # RabbitMQ communication
 
 def processQueueMessage(ch, method, properties, body: str):
+    """
+    Get block ID from the RabbitMQ queue, process it and
+    send structured block data to the blocks_writer queue
+    """
+
     logger.info(f"Received message: {body}")
     json_data = json.loads(body)
     data = fetch_block_data(int(json_data['entity_id']))
@@ -120,6 +129,7 @@ def sendMessageToQueue(message: json):
         logger.info('Unable to send data to RabbitMQ')
 
 
+# Main loop for work with RabbitMQ queue (with reconnection mechanism)
 channel = None
 while True:
     try:
@@ -141,5 +151,5 @@ while True:
 
     except Exception as e:
         logger.error(f'Problem with RabbitMQ {e}')
-        time.sleep(60)
+        time.sleep(5)
         continue

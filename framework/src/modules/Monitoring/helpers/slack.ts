@@ -1,11 +1,12 @@
 import { Service } from 'typedi'
 import { environment } from '@/environment'
-import needle from 'needle'
+//import needle from 'needle'
 
 @Service()
 export class MonitoringSlackHelper {
 
   public async sendMessage(message: string): Promise<void> {
+      /*
     const headers = { 'content-type': 'application/json' }
     try {
       await needle.post(
@@ -16,6 +17,8 @@ export class MonitoringSlackHelper {
     } catch (e) {
       console.error('Slack send error', e)
     }
+    */
   }
+
 }
 

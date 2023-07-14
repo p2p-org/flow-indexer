@@ -54,9 +54,9 @@ CREATE TABLE public.processing_metrics (
 	entity_id int4 NULL,
 	"name" varchar(20) NULL,
 	value int4 NULL,
-	row_id int4 NOT NULL DEFAULT nextval('sli_metrics_row_id_seq'::regclass),
+	row_id serial4 NOT NULL,
 	row_time timestamp NULL,
-	CONSTRAINT sli_metrics_pkey PRIMARY KEY (row_id)
+	CONSTRAINT processing_metrics_pkey PRIMARY KEY (row_id)
 );
 
 CREATE TABLE public.processing_state (

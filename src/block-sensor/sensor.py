@@ -21,6 +21,10 @@ channel = None
 
 
 def connectToRabbitMQ():
+    """
+    Connect to the RabbitMQ queue
+    """
+
     global channel
     parameters = pika.URLParameters(os.environ.get('RABBITMQ'))
     try:
@@ -32,6 +36,10 @@ def connectToRabbitMQ():
 
 
 def sendMessageToRabbitMQ(message: json):
+    """
+    Send json message to the queue RABBITMQ_QUEUE_BLOCK_SENSOR
+    """
+
     global channel
 
     if channel is None:
@@ -44,6 +52,10 @@ def sendMessageToRabbitMQ(message: json):
 
 
 def fetchLastBlock():
+    """
+    Fetch latest sealed block from Flow RPC node
+    """
+
     try:
         response = requests.get(f'{rpc_uri}/v1/blocks?height=sealed')
         if response.status_code == 200:
@@ -56,6 +68,8 @@ def fetchLastBlock():
         logger.error("Please check connection or the server's availability.")
 
 
+# Main loop. Peridically fetch latest block ID
+# from RPC node and send it to the RabbitMQ queue
 prev_block_height = 0
 while (1):
     last_block_height = fetchLastBlock()
