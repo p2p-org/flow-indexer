@@ -1,0 +1,1095 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+---
+openapi: 3.0.3
+
+info:
+#  x-logo:
+#    url: 'https://p2p.org/'
+  title: |
+    Staking rewards API.
+
+    This doc describes how you can get data about staking rewards by different parameters in several POS chains.
+  description: |
+    # Overview
+    
+    This section provides an overview of the API design, methods, and supported use cases.
+
+    Most of the endpoints accept `JSON` as input and return `JSON` responses.
+    This means that you must usually add the following headers to your request:
+    ```
+    Content-type: application/json
+    Accept: application/json
+    ```
+
+    # Trying the API
+
+    You can use a third party client, such as [curl](https://curl.haxx.se/), [HTTPie](https://httpie.org/),
+    [Postman](https://www.postman.com/) or [the Insomnia rest client](https://insomnia.rest/) to test
+    the Staking rewards API.
+
+    Note that you will need to pass credentials data.
+
+    For e.g., here is how to get blockchains list with [curl](https://p2p.staking.api/blockchains/list), when basic authorization is used:
+    ```bash
+    curl -X GET 'https://staking-data-api-p2p.hasura.app/api/rest/blockchains' \
+    -H 'Content-Type: application/json' \
+    -H 'x-hasura-admin-secret: secret' \
+    ```
+
+    # Authorization
+
+    Using `API key` header to interact with API.
+
+    Please request us for access.
+
+    # Errors
+
+    We follow the error response format proposed in [RFC 7807](https://tools.ietf.org/html/rfc7807)
+    also known as Problem Details for HTTP APIs. As with our normal API responses,
+    your client must be prepared to gracefully handle additional members of the response.
+
+    ## Unauthorized
+
+    This indicates that the client request has not been completed because
+    it lacks valid authentication credentials for the requested resource. Please check that you have valid credentials.
+
+    ## NotFound
+
+    This client error response indicates that the server cannot find the requested resource.
+
+    ## Unknown (Internal Server Error)
+
+    This means that the server encountered an unexpected condition that prevented it from
+    fulfilling the request.
+
+  version: '0.1'
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+  contact:
+    name: P2P Software
+    url: https://p2p.org
+
+servers:
+  - url: https://staking-data-api-p2p.hasura.app/api/rest
+    description: Staking rewards API.
+
+paths:
+  # Database entities
+  /blockchains:
+    get:
+      summary: List blockchains
+      description: |
+        Method returns the list of blockchains that are supported by API.
+        You can use this info for API endpoints which consist of `blockchain_name` in parameters.
+      operationId: getBlockchainsList
+      tags: [Blockchain]
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BlockchainCollection'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/Unknown'
+
+  /blockchains/{blockchain_name}/periods:
+    get:
+      summary: Blockchains periods
+      description: |
+        This method returns the acceptable periods of `blockchain_period` for staking data.
+        You can use this info for API endpoints which consist of `blockchain_period_name` in parameters.
+      operationId: getBlockchainsPeriods
+      tags: [ Blockchain ]
+      parameters:
+        - $ref: '#/components/parameters/BlockchainName'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BlockchainPeriodCollection'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/Unknown'
+
+  /blockchains/{blockchain_name}/report:
+    get:
+      summary: Blockchains on-chain report
+      description: |
+        This method returns the blockchain staking data for every defined blockchain period
+        (specified period of rewards payment and stat collection, can be `block` `era` `epoch` `day` depends on chain)
+      operationId: getBlockchainsReports
+      tags: [ Blockchain ]
+      parameters:
+        - $ref: '#/components/parameters/BlockchainName'
+        - $ref: '#/components/parameters/FilterExecutionDateFrom'
+        - $ref: '#/components/parameters/FilterExecutionDateTo'
+        - $ref: '#/components/parameters/PeriodCount'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BlockchainReportCollection'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/Unknown'
+
+  /blockchains/{blockchain_name}/validators:
+    get:
+      summary: List validators
+      description: Get the list of active validators per period.
+      operationId: getValidatorsList
+      tags: [ Validators ]
+      parameters:
+        - $ref: '#/components/parameters/BlockchainName'
+        - $ref: '#/components/parameters/FilterExecutionDateFrom'
+        - $ref: '#/components/parameters/FilterExecutionDateTo'
+        - $ref: '#/components/parameters/PeriodCount'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidatorCollection'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/Unknown'
+
+  /blockchains/{blockchain_name}/validators/report:
+    get:
+      summary: Validators on-chain report
+      description: |
+        This method returns the blockchain staking data for every defined blockchain period
+        per every validator that was active.
+      operationId: getValidatorsReport
+      tags: [ Validators ]
+      parameters:
+        - $ref: '#/components/parameters/BlockchainName'
+        - $ref: '#/components/parameters/FilterExecutionDateFrom'
+        - $ref: '#/components/parameters/FilterExecutionDateTo'
+        - $ref: '#/components/parameters/PeriodCount'
+        - $ref: '#/components/parameters/ValidatorAddress'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidatorReportCollection'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/Unknown'
+
+  /blockchains/{blockchain_name}/delegators:
+    get:
+      summary: List delegators
+      description: Get the list of active delegators per period.
+      operationId: getDelegatorsList
+      tags: [ Delegators ]
+      parameters:
+        - $ref: '#/components/parameters/BlockchainName'
+        - $ref: '#/components/parameters/FilterExecutionDateFrom'
+        - $ref: '#/components/parameters/FilterExecutionDateTo'
+        - $ref: '#/components/parameters/PeriodCount'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DelegatorCollection'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/Unknown'
+
+  /blockchains/{blockchain_name}/delegators/report:
+    get:
+      summary: Delegators on-chain report
+      description: Get delegator on-chain report.
+      operationId: getDelegatorsReport
+      tags: [ Delegators ]
+      parameters:
+        - $ref: '#/components/parameters/BlockchainName'
+        - $ref: '#/components/parameters/FilterExecutionDateFrom'
+        - $ref: '#/components/parameters/FilterExecutionDateTo'
+        - $ref: '#/components/parameters/PeriodCount'
+        - $ref: '#/components/parameters/BlockchainUserAddress'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DelegatorReportCollection'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/Unknown'
+
+  /deposits/{deposit_address}/apr:
+    get:
+      summary: APR
+      description: Get APR for given deposit address.
+      operationId: getAprForDepositAddress
+      tags: [ Delegators ]
+      parameters:
+        - $ref: '#/components/parameters/DepositAddress'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DelegatorAprCollection'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/Unknown'
+
+  /deposits/{deposit_address}/total_rewards:
+    get:
+      summary: Rewards
+      description: Get total rewards for given deposit address.
+      operationId: getTotalRewardsForDepositAddress
+      tags: [ Delegators ]
+      parameters:
+        - $ref: '#/components/parameters/DepositAddress'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DelegatorTotalRewardsCollection'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/Unknown'
+
+components:
+  # Reusable schemas (data models)
+  schemas:
+    # Database entities
+    BlockchainCollectionItem:
+      description: >
+        Blockchain collection item.
+
+      type: object
+      example: [
+        { blockchain_name: Ethereum, ecosystem_name: "Ethereum ecosystem" },
+        { blockchain_name: Polkadot, ecosystem_name: "Polkadot ecosystem" },
+        { blockchain_name: Kusama, ecosystem_name: "Polkadot ecosystem" }
+      ]
+      properties:
+        blockchain_name:
+          type: string
+          example: "Ethereum"
+          description: The name of the blockchain.
+        ecosystem_name:
+          type: string
+          example: "Ethereum ecosystem"
+          description: The name of Ecosystem.
+
+    BlockchainPeriodCollectionItem:
+      description: >
+        BlockchainPeriod collection item.
+
+      type: object
+      properties:
+        blockchain_name:
+          type: string
+          example: "Polkadot"
+          description: The name of the blockchain.
+        ecosystem_name:
+          type: string
+          example: "Polkadot ecosystem"
+          description: The name of Ecosystem.
+        blockchain_period_name:
+          type: string
+          enum:
+            - era
+            - block
+            - epoch
+          example: "era"
+          description: The name of period that rewards and other stat are collected by the API.
+
+    BlockchainReportCollectionItem:
+      description: >
+        BlockchainReport collection item.
+
+      type: object
+      properties:
+        blockchain_name:
+          type: string
+          example: "Polkadot"
+          description: The name of the blockchain.
+        ecosystem_name:
+          type: string
+          example: "Polkadot ecosystem"
+          description: The name of Ecosystem.
+        blockchain_period_name:
+          type: string
+          enum:
+            - era
+            - block
+            - epoch
+          example: "era"
+          description: The name of period that rewards and other stat are collected by the API.
+        blockchain_period_num:
+          type: string
+          example: "946"
+          description: |
+            The value of blockchain_period
+            (number in case of `era` `epoc` `block` and the day in case of point in time).
+        datetime_from:
+          type: string
+          example: "2023-01-04 15:36:18.014000"
+          format: datetime
+          description: The start of period (blockchain_period).
+        datetime_to:
+          type: string
+          example: "2023-01-05 15:36:18.011000"
+          format: datetime
+          description: The end of period (blockchain_period).
+        blockchain_total_rewards:
+          type: string
+          example: "241225.0405479788"
+          description: All rewards that were paid for the current period (blockchain_period).
+        reward_coingecoid:
+          type: string
+          example: "polkadot"
+          description: Token id in coingecko for rewards.
+        blockchain_total_stake:
+          type: string
+          example: "504346062.64968455"
+          description: Total stake for the current period (blockchain_period).
+        stake_coingecoide:
+          type: string
+          example: "polkadot"
+          description: Token id in coingecko for stake.
+        delegators_num:
+          type: string
+          example: "20241"
+          description: The number of delegators (stakers) for the current period (blockchain_period).
+        validators_num:
+          type: string
+          example: "297"
+          description: The number of validators for the current period (blockchain_period).
+
+    ValidatorCollectionItem:
+      description: >
+        Validator collection item.
+
+      type: object
+      properties:
+        blockchain_name:
+          type: string
+          example: "Polkadot"
+          description: The name of the blockchain.
+        ecosystem_name:
+          type: string
+          example: "Polkadot ecosystem"
+          description: The name of Ecosystem.
+        blockchain_period_name:
+          type: string
+          enum:
+            - era
+            - block
+            - epoch
+          example: "era"
+          description: The name of period that rewards and other stat are collected by the API.
+        blockchain_period_num:
+          type: string
+          example: "946"
+          description: |
+            The value of blockchain_period
+            (number in case of `era` `epoc` `block` and the day in case of point in time).
+        datetime_from:
+          type: string
+          example: "2023-01-04 15:36:18.014000"
+          format: datetime
+          description: The start of period (blockchain_period).
+        datetime_to:
+          type: string
+          example: "2023-01-05 15:36:18.011000"
+          format: datetime
+          description: The end of period (blockchain_period).
+        validators_addresses:
+          type: array
+          example: [
+            {"validator_address": "12eZSMk8GJYE2Lq943dSEnMUoZs1ek7jU8QN3rEA1yPZPjcR"},
+            {"validator_address": "12pgR5dyEkUP6iTR9u7b74Nz7uCsCYKpkFfA5LFbQPjGwNHL"}
+          ]
+          items:
+            type: string
+          description: The list of validator addresses participated in staking for specific blockchain and specific period.
+
+    ValidatorReportCollectionItem:
+      description: >
+        Validator collection item.
+
+      type: object
+      properties:
+        blockchain_name:
+          type: string
+          example: "Polkadot"
+          description: The name of the blockchain.
+        ecosystem_name:
+          type: string
+          example: "Polkadot ecosystem"
+          description: The name of Ecosystem.
+        blockchain_period_name:
+          type: string
+          enum:
+            - era
+            - block
+            - epoch
+          example: "era"
+          description: The name of period that rewards and other stat are collected by the API.
+        blockchain_period_num:
+          type: string
+          example: "946"
+          description: |
+            The value of blockchain_period
+            (number in case of `era` `epoc` `block` and the day in case of point in time).
+        datetime_from:
+          type: string
+          example: "2023-01-04 15:36:18.014000"
+          format: datetime
+          description: The start of period (blockchain_period).
+        datetime_to:
+          type: string
+          example: "2023-01-05 15:36:18.011000"
+          format: datetime
+          description: The end of period (blockchain_period).
+        validators_addresses:
+          type: string
+          example: "14AkAFBzukRhAFh1wyko1ZoNWnUyq7bY1XbjeTeCHimCzPU1"
+          description: The public key of validator participated in staking for specific blockchain and specific period.
+        delegator_num :
+          type: string
+          example: "256"
+          description: The number of stakers for current validator during this period.
+        validator_fee:
+          type: string
+          example: "2.5"
+          description: The percentage of validator’s fee.
+        stake:
+          type: array
+          example: [
+            {type: clients_stake, amount: "2275343.5417242087", coingekoid: polkadot},
+            {type: self, amount: "0", coingekoid: polkadot}
+          ]
+          description: The array of stake info for validator.
+          items:
+            $ref: '#/components/schemas/StakeItem'
+        rewards:
+          type: array
+          example: [
+            { type: validator_fee, amount: "20.26669878544223", coingekoid: polkadot, period_payment_date: "2023-01-05 15:36:18.011000"}
+          ]
+          description: The array of validator’s rewards for this period.
+          items:
+            $ref: '#/components/schemas/RewardsItem'
+
+    DelegatorCollectionItem:
+      description: >
+        Delegator collection item.
+
+      type: object
+      properties:
+        blockchain_name:
+          type: string
+          example: "Polkadot"
+          description: The name of the blockchain.
+        ecosystem_name:
+          type: string
+          example: "Polkadot ecosystem"
+          description: The name of Ecosystem.
+        blockchain_period_name:
+          type: string
+          enum:
+            - era
+            - block
+            - epoch
+          example: "era"
+          description: The name of period that rewards and other stat are collected by the API.
+        blockchain_period_num:
+          type: string
+          example: "1016"
+          description: |
+            The value of blockchain_period
+            (number in case of `era` `epoc` `block` and the day in case of point in time).
+        datetime_from:
+          type: string
+          example: "2023-03-14 15:36:18.014000"
+          format: datetime
+          description: The start of period (blockchain_period).
+        datetime_to:
+          type: string
+          example: "2023-03-15 15:36:18.011000"
+          format: datetime
+          description: The end of period (blockchain_period).
+        blockchain_user_address:
+          type: array
+          example: [
+            {"blockchain_user_address": "1BEV8SuBhtFYcXhwesJf9cePgpFjGzY58ybnb4yfrEAaBMx"},
+            {"blockchain_user_address": "1MUoG2n9WhmXUszhuQdyPeXSGg7MoVn8ZFaZnXyGyzs4wW1"}
+          ]
+          items:
+            type: string
+          description: The list of active delegator addresses.
+
+    DelegatorReportCollectionItem:
+      description: >
+        Delegator collection item.
+
+      type: object
+      properties:
+        blockchain_name:
+          type: string
+          example: "Polkadot"
+          description: The name of the blockchain.
+        ecosystem_name:
+          type: string
+          example: "Polkadot ecosystem"
+          description: The name of Ecosystem.
+        blockchain_period_name:
+          type: string
+          enum:
+            - era
+            - block
+            - epoch
+          example: "era"
+          description: The name of period that rewards and other stat are collected by the API.
+        blockchain_period_num:
+          type: string
+          example: "946"
+          description: |
+            The value of blockchain_period
+            (number in case of `era` `epoc` `block` and the day in case of point in time).
+        datetime_from:
+          type: string
+          example: "2023-01-04 15:36:18.014000"
+          format: datetime
+          description: The start of period (blockchain_period).
+        datetime_to:
+          type: string
+          example: "2023-01-05 15:36:18.011000"
+          format: datetime
+          description: The end of period (blockchain_period).
+        blockchain_user_address:
+          type: string
+          example: "13YoPoKBvLrZM1avJBUMQ9Ccd8uC7D4y8dWNYeeXqpQQGEYP"
+          description: The public key of delegator.
+        stake:
+          type: array
+          example: [
+            {type: clients_stake, amount: "701.5", coingekoid: polkadot}
+          ]
+          description: The array of different types (if there are different types) of delegator’s stake for period.
+          items:
+            $ref: '#/components/schemas/DelegatorStakeItem'
+        rewards:
+          type: array
+          example: [
+            {
+              type: client_reward,
+              amount: "0.34437678615378675",
+              coingekoid: polkadot,
+              period_payment_date: "2023-01-05 15:36:18.011000",
+              validator_address: "153YD8ZHD9dRh82U419bSCB5SzWhbdAFzjj4NtA5pMazR2yC"
+            }
+          ]
+          description: The array of delegator’s rewards for this period.
+          items:
+            $ref: '#/components/schemas/DelegatorRewardsItem'
+
+    DelegatorAprCollectionItem:
+      description: >
+        Delegator APR item.
+
+      type: object
+      properties:
+        apr:
+          type: string
+          example: "4.7415101558088555"
+          description: The annual percentage rate.
+
+    DelegatorTotalRewardsCollectionItem:
+      description: >
+        Delegator total rewards item.
+
+      type: object
+      properties:
+        total_rewards:
+          type: string
+          example: "0.06417987100000008"
+          description: The total rewards.
+
+    StakeItem:
+      type: object
+      properties:
+        type:
+          type: string
+          description: "Type of stake: `self`/`client’s`."
+        amount:
+          type: string
+          description: The stake value.
+        coingekoid:
+          type: string
+          description: The coingecko id for stake token.
+
+    DelegatorStakeItem:
+      type: object
+      properties:
+        type:
+          type: string
+          description: Type of stake (if there are different types in specific blockchain).
+        amount:
+          type: string
+          description: Delegator’s stake for current period in tokens.
+        coingekoid:
+          type: string
+          description: The coingecko id for stake token.
+        validator_address:
+          type: string
+          description: The validator’s address that was affiliated with this stake.
+
+    RewardsItem:
+      type: object
+      properties:
+        type:
+          type: string
+          description: |
+            Type of rewards: fees from `clients`/`fix` rewards.
+            There are different types of rewards in some blockchains (eth has block’s rewards, attestation rewards …).
+            API will answer with rewards divided into types.
+        amount:
+          type: string
+          description: The reward value.
+        coingekoid:
+          type: string
+          description: The coingecko id for rewards token.
+        period_payment_date:
+          type: string
+          description: The date of payment for the staking rewards.
+
+    DelegatorRewardsItem:
+      type: object
+      properties:
+        type:
+          type: string
+          description: Type of reward (if there are different types in specific blockchain).
+        amount:
+          type: string
+          description: The reward value for current period in tokens.
+        coingekoid:
+          type: string
+          description: The coingecko id for rewards token.
+        period_payment_date:
+          type: string
+          description: The date of payment for the staking rewards.
+        validator_address:
+          type: string
+          description: The validator’s address that was affiliated with this reward.
+
+    BlockchainCollection:
+      type: object
+      description: |
+        Collection of blockchain.
+      allOf:
+        - type: object
+          properties:
+            blockchains:
+              type: array
+              items:
+                $ref: '#/components/schemas/BlockchainCollectionItem'
+
+    BlockchainPeriodCollection:
+      type: object
+      description: |
+        Collection of blockchain period.
+      allOf:
+        - type: object
+          properties:
+            blockchainPeriods:
+              type: array
+              items:
+                $ref: '#/components/schemas/BlockchainPeriodCollectionItem'
+
+    BlockchainReportCollection:
+      type: object
+      description: |
+        Collection of blockchain on-chain reports.
+      allOf:
+        - type: object
+          properties:
+            blockchainReports:
+              type: array
+              items:
+                $ref: '#/components/schemas/BlockchainReportCollectionItem'
+
+    ValidatorCollection:
+      type: object
+      description: |
+        Collection of validators.
+      allOf:
+        - type: object
+          properties:
+            validators:
+              type: array
+              items:
+                $ref: '#/components/schemas/ValidatorCollectionItem'
+
+    ValidatorReportCollection:
+      type: object
+      description: |
+        Collection of validators.
+      allOf:
+        - type: object
+          properties:
+            validatorReports:
+              type: array
+              items:
+                $ref: '#/components/schemas/ValidatorReportCollectionItem'
+
+    DelegatorCollection:
+      type: object
+      description: |
+        Collection of delegators.
+      allOf:
+        - type: object
+          properties:
+            delegators:
+              type: array
+              items:
+                $ref: '#/components/schemas/DelegatorCollectionItem'
+
+    DelegatorReportCollection:
+      type: object
+      description: |
+        Collection of validators.
+      allOf:
+        - type: object
+          properties:
+            delegatorReports:
+              type: array
+              items:
+                $ref: '#/components/schemas/DelegatorReportCollectionItem'
+
+    DelegatorAprCollection:
+      type: object
+      description: |
+        Collection of APR.
+      allOf:
+        - type: object
+          properties:
+            result:
+              type: array
+              items:
+                $ref: '#/components/schemas/DelegatorAprCollectionItem'
+
+    DelegatorTotalRewardsCollection:
+      type: object
+      description: |
+        Collection of total rewards.
+      allOf:
+        - type: object
+          properties:
+            result:
+              type: array
+              items:
+                $ref: '#/components/schemas/DelegatorTotalRewardsCollectionItem'
+
+    # Error response
+    401ErrorCode:
+      description: |
+        [RFC7807](https://tools.ietf.org/html/rfc7807) compliant response.
+      type: object
+      properties:
+        code:
+          type: string
+          example: 'access-denied'
+          description: A short, human-readable summary of the problem type.
+        error:
+          type: string
+          example: 'invalid x-hasura-admin-secret/x-hasura-access-key'
+          description: A human-readable explanation specific to this occurrence of the problem.
+        path:
+          type: string
+          example: '$'
+          description: The full path to the result field where the error was raised.
+      required:
+        - code
+        - error
+        - path
+
+    404ErrorCode:
+      description: |
+        [RFC7807](https://tools.ietf.org/html/rfc7807) compliant response.
+      type: object
+      properties:
+        code:
+          type: string
+          example: 'not-found'
+          description: A short, human-readable summary of the problem type.
+        error:
+          type: string
+          example: 'Endpoint not found'
+          description: A human-readable explanation specific to this occurrence of the problem.
+        path:
+          type: string
+          example: '$'
+          description: The full path to the result field where the error was raised.
+      required:
+        - code
+        - error
+        - path
+
+    500ErrorCode:
+      description: |
+        [RFC7807](https://tools.ietf.org/html/rfc7807) compliant response.
+      type: object
+      properties:
+        code:
+          type: string
+          example: 'error'
+          description: A short, human-readable summary of the problem type.
+        error:
+          type: string
+          example: 'Unknown server error'
+          description: A human-readable explanation specific to this occurrence of the problem.
+        path:
+          type: string
+          example: '$'
+          description: The full path to the result field where the error was raised.
+      required:
+        - code
+        - error
+        - path
+
+    CollectionInfo:
+      description: Metadata about collection.
+      type: object
+      properties:
+        total_entries:
+          type: integer
+          description: Count of objects in the current result set.
+
+  # Reusable path, query, header and cookie parameters
+  parameters:
+    # Pagination parameters
+    PageOffset:
+      in: query
+      name: offset
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+      description: The number of items to skip before starting to collect the result set.
+
+    PageLimit:
+      in: query
+      name: limit
+      required: false
+      schema:
+        type: integer
+        default: 100
+      description: The numbers of items to return.
+
+    # Database entity fields
+    DepositAddress:
+      in: path
+      name: deposit_address
+      schema:
+        type: string
+      required: true
+      description: |
+        The blockchain user address.
+
+    BlockchainName:
+      in: path
+      name: blockchain_name
+      schema:
+        type: string
+      required: true
+      description: |
+        The name of blockchain.
+
+    PeriodCount:
+      in: query
+      name: period_count
+      schema:
+        type: string
+        default: 100
+      required: false
+      description: |
+        The number of last periods for data mart.
+
+    BlockchainPeriodName:
+      in: query
+      name: blockchain_period_name
+      schema:
+        type: string
+      required: false
+      description: |
+        The name of the period that rewards and other stat are collected by the API.
+        The list of acceptable params for specific blockchain can be requested by `Get blockchain periods` endpoint.
+
+    BlockchainPeriodNum:
+      in: query
+      name: blockchain_period_num
+      schema:
+        type: string
+        enum:
+          - era
+          - block
+          - epoch
+      required: false
+      description: The value of period.
+
+    ValidatorAddress:
+      in: query
+      name: validator_address
+      schema:
+        type: string
+      required: true
+      description: Validator public key.
+
+    BlockchainUserAddress:
+      in: query
+      name: blockchain_user_address
+      schema:
+        type: string
+      required: true
+      description: Delegator public key.
+
+    # Filters
+    FilterExecutionDateFrom:
+      in: query
+      name: datetime_from
+      schema:
+        type: string
+        format: date-time
+        default: 2000-01-01 00:00:00
+      required: false
+      description: |
+        The start date for query.
+
+    FilterExecutionDateTo:
+      in: query
+      name: datetime_to
+      schema:
+        type: string
+        format: date-time
+        default: 2100-01-01 00:00:00
+      required: false
+      description: |
+        The finish date for query.
+
+  # Reusable request bodies
+  requestBodies: {}
+
+  # Reusable responses, such as 401 Unauthenticated or 400 Bad Request
+  responses:
+    # 401
+    'Unauthenticated':
+      description: Request not authenticated due to missing, invalid, authentication info.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/401ErrorCode'
+    # 404
+    'NotFound':
+      description: A specified resource is not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/404ErrorCode'
+    # 500
+    'Unknown':
+      description: Unknown server error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/500ErrorCode'
+
+  # Reusable response headers
+  headers: {}
+
+  # Reusable examples
+  examples: {}
+
+  # Reusable links
+  links: {}
+
+  # Reusable callbacks
+  callbacks: {}
+
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-hasura-admin-secret
+
+# The API will provide support for plugins to support various authorization mechanisms.
+# Detailed information will be available in the plugin specification.
+security:
+  - ApiKeyAuth: []
+
+tags:
+  - name: Blockchain
+  - name: Validators
+  - name: Delegators
+
+
+#externalDocs:
+#  url: https://p2p.staking.api/blockchains/
