@@ -123,7 +123,7 @@ def processQueueMessage(ch, method, properties, body: str):
     ch.basic_ack(delivery_tag=method.delivery_tag)
 
 
-def sendMessageToQueue(message: dict[str, Any]):
+def sendMessageToQueue(message: Dict[str, Any]):
     try:
         if channel is not None:
             channel.basic_publish(exchange='', routing_key=send_queue_name, body=json.dumps(message))

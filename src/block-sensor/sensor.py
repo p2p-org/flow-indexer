@@ -3,6 +3,7 @@ import requests
 import time
 import pika
 import os
+from typing import Any, Dict
 from urllib.parse import urlparse
 from dotenv import load_dotenv
 from pino import pino
@@ -36,7 +37,7 @@ def connectToRabbitMQ():
         logger.error("RabbitMQ connection problem")
 
 
-def sendMessageToRabbitMQ(msg: dict[str, int]):
+def sendMessageToRabbitMQ(msg: Dict[str, int]):
     """
     Send json message to the queue RABBITMQ_QUEUE_BLOCK_SENSOR
     """
