@@ -1,6 +1,6 @@
 import { ConfirmChannel, ConsumeMessage } from 'amqplib'
 import AmqpConnectionManager from 'amqp-connection-manager'
-import { IAmqpConnectionManager } from 'amqp-connection-manager/dist/esm/AmqpConnectionManager'
+//import { IAmqpConnectionManager } from 'amqp-connection-manager/dist/esm/AmqpConnectionManager'
 import { environment } from '@/environment'
 import { logger } from '@/loaders/logger'
 
@@ -25,8 +25,7 @@ export type Rabbit = {
 }
 
 export const RabbitMQ = async (connectionString: string): Promise<Rabbit> => {
-
-  const connection: IAmqpConnectionManager = await AmqpConnectionManager.connect(connectionString)
+  const connection: any = await AmqpConnectionManager.connect(connectionString)
 
   connection.on('connect', () => {
     logger.info({ event: 'RabbitMQ.connection', message: 'Successfully connected' })
@@ -68,23 +67,22 @@ export const RabbitMQ = async (connectionString: string): Promise<Rabbit> => {
       await channelWrapper.sendToQueue(queue, message)
     },
     process: async (queue: string, processor: QueueProcessor) => {
-      console.log(queue);
-      const consumer =
-        async (msg: ConsumeMessage | null): Promise<void> => {
-          if (msg) {
-            const message = JSON.parse(msg.content.toString()) //as TaskMessage<T>
-            try {
-              await processor.processQueueMessage(message)
-              //logger.debug({ event: 'memory', message: Math.ceil(process.memoryUsage().heapUsed / (1024 * 1024)) })
-              channelWrapper.ack(msg)
-            } catch (error: any) {
-              logger.error({ event: 'RabbitMQ.process', error: error.message })
+      console.log(queue)
+      const consumer = async (msg: ConsumeMessage | null): Promise<void> => {
+        if (msg) {
+          const message = JSON.parse(msg.content.toString()) //as TaskMessage<T>
+          try {
+            await processor.processQueueMessage(message)
+            //logger.debug({ event: 'memory', message: Math.ceil(process.memoryUsage().heapUsed / (1024 * 1024)) })
+            channelWrapper.ack(msg)
+          } catch (error: any) {
+            logger.error({ event: 'RabbitMQ.process', error: error.message })
 
-              //TODO: ?
-              channelWrapper.ack(msg);
-            }
+            //TODO: ?
+            channelWrapper.ack(msg)
           }
         }
+      }
       await channelWrapper.consume(queue, consumer)
     },
   }

@@ -45,11 +45,9 @@ const preEnv = cleanEnv(process.env, {
   MAX_ATTEMPTS: num({ default: 5 }),
 })
 
-
 const parseModeEnum = (env: typeof preEnv) => {
   //env.MODE === 'BLOCK_PROCESSOR' ? MODE.BLOCK_PROCESSOR : env.MODE === 'LISTENER' ? MODE.LISTENER : MODE.STAKING_PROCESSOR
-  const nodeEnv: NODE_ENV =
-    env.NODE_ENV === 'development' ? NODE_ENV.DEVELOPMENT : NODE_ENV.PRODUCTION
+  const nodeEnv: NODE_ENV = env.NODE_ENV === 'development' ? NODE_ENV.DEVELOPMENT : NODE_ENV.PRODUCTION
   return { ...env, NODE_ENV: nodeEnv }
 }
 

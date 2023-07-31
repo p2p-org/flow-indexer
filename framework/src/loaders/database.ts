@@ -23,12 +23,15 @@ export const KnexPG = async (connectionString: string): Promise<Knex> => {
     },
   })
 
-  pgsql.raw('SELECT 1').then(() => {
-    logger.info('✌️ Database connected')
-  }).catch((e: any) => {
-    logger.error('Database not connected')
-    logger.error(e)
-  })
+  pgsql
+    .raw('SELECT 1')
+    .then(() => {
+      logger.info('✌️ Database connected')
+    })
+    .catch((e: any) => {
+      logger.error('Database not connected')
+      logger.error(e)
+    })
 
   return pgsql
 }

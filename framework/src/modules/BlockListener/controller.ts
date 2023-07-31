@@ -9,7 +9,7 @@ export class BlockListenerController {
   constructor(
     @Inject('logger') private readonly logger: Logger,
     @Inject('expressApp') private readonly expressApp: express.Application,
-    private listnerService: BlockListenerService
+    private listnerService: BlockListenerService,
   ) {
     this.init()
   }
@@ -36,18 +36,14 @@ export class BlockListenerController {
       return res.json({ result: 'ok' })
     })
 
-
     this.expressApp.get('/blocks/process/:startBlockId/:endBlockId', async (req, res) => {
       if (isNaN(Number(req.params.startBlockId))) return res.json({ error: 'blockId must be a number' })
       await this.listnerService.preloadMultipleBlocks({
         fromBlock: Number(req.params.startBlockId),
         toBlock: Number(req.params.endBlockId),
-        updateState: false
+        updateState: false,
       })
       return res.json({ result: 'ok' })
     })
-
-
-
   }
 }

@@ -9,11 +9,7 @@ const network = { network_id: environment.NETWORK_ID }
 
 @Service()
 export class BlockListenerDatabaseHelper {
-
-  constructor(
-    @Inject('knex') private readonly knex: Knex,
-    @Inject('logger') private readonly logger: Logger,
-  ) { }
+  constructor(@Inject('knex') private readonly knex: Knex, @Inject('logger') private readonly logger: Logger) {}
 
   public async findLastEntityId(entity: ENTITY): Promise<number> {
     const lastEntity = await ProcessingStateModel(this.knex)
@@ -27,12 +23,10 @@ export class BlockListenerDatabaseHelper {
   }
 
   public async updateLastTaskEntityId(status: ProcessingStateModel<ENTITY>): Promise<void> {
-
     await ProcessingStateModel(this.knex)
       //.transacting(trx)
       .insert({ ...status, ...network })
       .onConflict(['entity', 'network_id'])
       .merge()
   }
-
 }

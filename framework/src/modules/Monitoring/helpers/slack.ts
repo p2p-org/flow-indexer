@@ -4,9 +4,8 @@ import { environment } from '@/environment'
 
 @Service()
 export class MonitoringSlackHelper {
-
   public async sendMessage(message: string): Promise<void> {
-      /*
+    /*
     const headers = { 'content-type': 'application/json' }
     try {
       await needle.post(
@@ -19,6 +18,4 @@ export class MonitoringSlackHelper {
     }
     */
   }
-
 }
-

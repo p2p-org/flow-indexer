@@ -14,31 +14,27 @@ export const sleep = async (time: number): Promise<number> => {
   return new Promise((res) => setTimeout(res, time))
 }
 
-
 @Service()
 export class BlockListenerService {
-
   gracefulShutdownFlag = false
   messagesBeingProcessed = false
   isPaused = false
-  lastReceviedBlockId = 0;
+  lastReceviedBlockId = 0
 
   constructor(
     @Inject('logger') private readonly logger: Logger,
     @Inject('knex') private readonly knex: Knex,
     private readonly databaseHelper: BlockListenerDatabaseHelper,
     private readonly tasksRepository: TasksRepository,
-  ) { }
-
+  ) {}
 
   public async processQueueMessage(message: any): Promise<void> {
     const { entity_id: blockId, collect_uid } = message
-    this.newBlock(blockId);
+    this.newBlock(blockId)
   }
 
-
   private async newBlock(blockId: number): Promise<void> {
-    this.lastReceviedBlockId = blockId;
+    this.lastReceviedBlockId = blockId
     if (this.messagesBeingProcessed || this.isPaused) return
     //this.logger.debug({ event: 'BlocksListener.preload newFinalizedBlock', newFinalizedBlockId: blockId })
     const lastBlockIdInProcessingState = await this.databaseHelper.findLastEntityId(ENTITY.BLOCK)
@@ -51,7 +47,7 @@ export class BlockListenerService {
     return this.lastReceviedBlockId
   }
 
-  public async preloadMultipleBlocks(args: { fromBlock: number; toBlock: number, updateState: boolean }): Promise<void> {
+  public async preloadMultipleBlocks(args: { fromBlock: number; toBlock: number; updateState: boolean }): Promise<void> {
     if (this.messagesBeingProcessed) return
     this.messagesBeingProcessed = true
 
@@ -60,13 +56,11 @@ export class BlockListenerService {
     if (fromBlock > toBlock) {
       this.logger.error(`Incorrect from and to blocks: fromBlock=${fromBlock} is more than toBlock=${toBlock}`)
       this.messagesBeingProcessed = false
-      return;
+      return
     }
 
-    if (fromBlock < toBlock)
-      this.logger.info(`Create series of block tasks from ${fromBlock} to ${toBlock}`)
-    if (fromBlock == toBlock)
-      this.logger.info(`Create block task ${fromBlock}`)
+    if (fromBlock < toBlock) this.logger.info(`Create series of block tasks from ${fromBlock} to ${toBlock}`)
+    if (fromBlock == toBlock) this.logger.info(`Create block task ${fromBlock}`)
 
     let tasks: ProcessingTaskModel<ENTITY.BLOCK>[] = []
 
@@ -97,7 +91,6 @@ export class BlockListenerService {
     this.messagesBeingProcessed = false
   }
 
-
   private async ingestTasksChunk(tasks: ProcessingTaskModel<ENTITY.BLOCK>[], updateState: boolean): Promise<void> {
     try {
       for (let task of tasks) {
@@ -116,8 +109,7 @@ export class BlockListenerService {
         entity_id: tasks.at(-1)!.entity_id,
       }
 
-      if (updateState)
-        await this.databaseHelper.updateLastTaskEntityId(updatedLastInsertRecord)
+      if (updateState) await this.databaseHelper.updateLastTaskEntityId(updatedLastInsertRecord)
 
       /*
       this.logger.debug({
@@ -149,8 +141,7 @@ export class BlockListenerService {
     return task
   }
 
-
-  private async sendTaskToToRabbit(entity: ENTITY, record: { collect_uid: string, entity_id: number }): Promise<void> {
+  private async sendTaskToToRabbit(entity: ENTITY, record: { collect_uid: string; entity_id: number }): Promise<void> {
     const rabbitMQ: Rabbit = Container.get('rabbitMQ')
     await rabbitMQ.send(QUEUES.BlocksProcessor, {
       entity_id: record.entity_id,
@@ -176,7 +167,6 @@ export class BlockListenerService {
   public async restartUnprocessedTasks(entity: ENTITY): Promise<void> {
     let lastEntityId = 0
     while (true) {
-
       const records = await this.tasksRepository.getUnprocessedTasks(entity, lastEntityId)
       if (!records || !records.length) {
         return
@@ -190,7 +180,7 @@ export class BlockListenerService {
       this.logger.info({
         event: 'BlocksListener.restartUnprocessedTasks',
         message: `Preloaded ${environment.BATCH_INSERT_CHUNK_SIZE} tasks to 
-                rabbit queue for processing ${entity}. Last entity id: ${lastEntityId}`
+                rabbit queue for processing ${entity}. Last entity id: ${lastEntityId}`,
       })
 
       await sleep(5000)

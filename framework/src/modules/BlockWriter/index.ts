@@ -4,7 +4,6 @@ import { QUEUES, Rabbit } from '@/loaders/rabbitmq'
 import { Logger } from 'pino'
 
 export default (): void => {
-
   const serviceInstance = Container.get(BlockWriterService)
 
   const rabbitMQ: Rabbit = Container.get('rabbitMQ')
