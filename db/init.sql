@@ -53,7 +53,7 @@ CREATE TABLE public.processing_metrics (
 	entity varchar(66) NULL,
 	entity_id int4 NULL,
 	"name" varchar(20) NULL,
-	value int4 NULL,
+	value int8 NULL,
 	row_id serial4 NOT NULL,
 	row_time timestamp NULL,
 	CONSTRAINT processing_metrics_pkey PRIMARY KEY (row_id)
