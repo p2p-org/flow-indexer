@@ -12,7 +12,6 @@ import { environment } from '@/environment'
 
 @Service()
 export class BlockWriterService {
-
   gracefulShutdownFlag = false
   messagesBeingProcessed = false
   isPaused = false
@@ -23,8 +22,7 @@ export class BlockWriterService {
     @Inject('sliMetrics') private readonly sliMetrics: SliMetrics,
     private readonly databaseHelper: BlockWriterDatabaseHelper,
     private readonly tasksRepository: TasksRepository,
-  ) { }
-
+  ) {}
 
   public async processQueueMessage(message: any): Promise<void> {
     const { entity_id: blockId, collect_uid } = message
@@ -35,92 +33,97 @@ export class BlockWriterService {
     }
     await this.tasksRepository.increaseAttempts(ENTITY.BLOCK, blockId)
 
-    await this.knex.transaction(async (trx) => {
-      const taskRecord = await this.tasksRepository.readTaskAndLockRow(ENTITY.BLOCK, blockId, trx)
+    await this.knex
+      .transaction(async (trx) => {
+        const taskRecord = await this.tasksRepository.readTaskAndLockRow(ENTITY.BLOCK, blockId, trx)
 
-      if (!taskRecord) {
-        await trx.rollback()
-        this.logger.warn({
-          event: 'Queue.processTaskMessage',
-          blockId,
-          warning: 'Task record not found. Skip processing',
-          collect_uid,
+        if (!taskRecord) {
+          await trx.rollback()
+          this.logger.warn({
+            event: 'Queue.processTaskMessage',
+            blockId,
+            warning: 'Task record not found. Skip processing',
+            collect_uid,
+          })
+          return
+        }
+
+        if (taskRecord.status !== PROCESSING_STATUS.NOT_PROCESSED) {
+          await trx.rollback()
+          this.logger.warn({
+            event: 'BlockProcessor.processTaskMessage',
+            blockId,
+            warning: `Block  ${blockId} has been already processed. Skip processing.`,
+            collect_uid,
+          })
+          return
+        }
+
+        //check that block wasn't processed already
+        if (await this.databaseHelper.getBlockById(blockId)) {
+          this.logger.info({
+            event: 'BlockProcessor.processTaskMessage',
+            blockId,
+            message: `Block ${blockId} already present in the database`,
+          })
+
+          await this.tasksRepository.setTaskRecordAsProcessed(taskRecord, trx)
+          await trx.commit()
+          return
+        }
+
+        for (const transaction of message['transactions']) {
+          await this.databaseHelper.saveTransaction(trx, transaction)
+        }
+        for (const event of message['events']) {
+          await this.databaseHelper.saveEvent(trx, event)
+        }
+        await this.databaseHelper.saveBlock(trx, message['block'])
+
+        await this.sliMetrics.add({
+          entity: 'block',
+          entity_id: blockId,
+          name: 'process_time_ms',
+          value: Date.now() - taskRecord.start_timestamp.getTime(),
         })
-        return
-      }
 
-      if (taskRecord.status !== PROCESSING_STATUS.NOT_PROCESSED) {
-        await trx.rollback()
-        this.logger.warn({
-          event: 'BlockProcessor.processTaskMessage',
-          blockId,
-          warning: `Block  ${blockId} has been already processed. Skip processing.`,
-          collect_uid,
+        const blockTime = new Date(message['block']['block_time'])
+        await this.sliMetrics.add({
+          entity: 'block',
+          entity_id: blockId,
+          name: 'delay_time_ms',
+          value: Date.now() - blockTime.getTime(),
         })
-        return
-      }
 
-      //check that block wasn't processed already
-      if (await this.databaseHelper.getBlockById(blockId)) {
+        //const memorySize = Math.ceil(process.memoryUsage().heapUsed / (1024 * 1024))
+        //await this.sliMetrics.add({ entity: 'block', entity_id: blockId, name: 'memory_usage_mb', value: memorySize })
+
+        await this.tasksRepository.setTaskRecordAsProcessed(taskRecord, trx)
+
+        await trx.commit()
+
         this.logger.info({
           event: 'BlockProcessor.processTaskMessage',
           blockId,
-          message: `Block ${blockId} already present in the database`,
-        })
-
-        await this.tasksRepository.setTaskRecordAsProcessed(taskRecord, trx)
-        await trx.commit()
-        return
-      }
-
-
-      for (const transaction of message['transactions']) {
-        await this.databaseHelper.saveTransaction(trx, transaction)
-      }
-      for (const event of message['events']) {
-        await this.databaseHelper.saveEvent(trx, event)
-      }
-      await this.databaseHelper.saveBlock(trx, message['block'])
-
-      await this.sliMetrics.add(
-        { entity: 'block', entity_id: blockId, name: 'process_time_ms', value: Date.now() - taskRecord.start_timestamp.getTime() })
-
-      const blockTime = new Date(message['block']['block_time'])
-      await this.sliMetrics.add(
-        { entity: 'block', entity_id: blockId, name: 'delay_time_ms', value: Date.now() - blockTime.getTime() })
-
-
-      //const memorySize = Math.ceil(process.memoryUsage().heapUsed / (1024 * 1024))
-      //await this.sliMetrics.add({ entity: 'block', entity_id: blockId, name: 'memory_usage_mb', value: memorySize })
-
-
-      await this.tasksRepository.setTaskRecordAsProcessed(taskRecord, trx)
-
-      await trx.commit()
-
-      this.logger.info({
-        event: 'BlockProcessor.processTaskMessage',
-        blockId,
-        message: `Block ${blockId} has been processed and committed`,
-        ...metadata,
-        collect_uid,
-      })
-
-      //processedBlockGauge.set(blockId)
-      //if (!newTasks.length) return
-
-    }).catch((error: Error) => {
-      this.logger.error({
-        event: 'BlockProcessor.processTaskMessage',
-        blockId,
-        error: error.message,
-        data: {
+          message: `Block ${blockId} has been processed and committed`,
           ...metadata,
           collect_uid,
-        },
-      })
-      throw error
-    })
-  }
+        })
 
+        //processedBlockGauge.set(blockId)
+        //if (!newTasks.length) return
+      })
+      .catch((error: Error) => {
+        this.logger.error({
+          event: 'BlockProcessor.processTaskMessage',
+          blockId,
+          error: error.message,
+          data: {
+            ...metadata,
+            collect_uid,
+          },
+        })
+        throw error
+      })
+  }
 }

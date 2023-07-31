@@ -10,12 +10,7 @@ const network = { network_id: environment.NETWORK_ID }
 
 @Service()
 export class BlockWriterDatabaseHelper {
-
-  constructor(
-    @Inject('knex') private readonly knex: Knex,
-    @Inject('logger') private readonly logger: Logger,
-  ) { }
-
+  constructor(@Inject('knex') private readonly knex: Knex, @Inject('logger') private readonly logger: Logger) {}
 
   async getBlockById(blockId: number): Promise<any | null> {
     const blocksRecords = await this.knex('blocks')

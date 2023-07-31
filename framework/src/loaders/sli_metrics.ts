@@ -9,17 +9,11 @@ const network = { network_id: environment.NETWORK_ID }
 
 @Service()
 export class SliMetrics {
-
-  constructor(
-    @Inject('knex') private readonly knex: Knex,
-    @Inject('logger') private readonly logger: Logger,
-  ) {
+  constructor(@Inject('knex') private readonly knex: Knex, @Inject('logger') private readonly logger: Logger) {
     this.add({ entity: 'system', name: `restart_framework`, row_time: new Date() })
   }
 
   public async add(data: ProcessingMetricsModel): Promise<void> {
-
-    await ProcessingMetricsModel(this.knex)
-      .insert({ ...data, ...network, row_time: new Date() })
+    await ProcessingMetricsModel(this.knex).insert({ ...data, ...network, row_time: new Date() })
   }
 }

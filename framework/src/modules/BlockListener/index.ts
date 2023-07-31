@@ -6,7 +6,6 @@ import { QUEUES, Rabbit } from '@/loaders/rabbitmq'
 import { Logger } from 'pino'
 
 export default (): void => {
-
   const serviceInstance = Container.get(BlockListenerService)
   Container.get(BlockListenerController)
 

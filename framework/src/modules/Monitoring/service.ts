@@ -13,8 +13,7 @@ import { ENTITY } from '@/models/processing_task.model'
 
 @Service()
 export class MonitoringService {
-
-  listnerServiceInstance;
+  listnerServiceInstance
 
   constructor(
     @Inject('logger') private readonly logger: Logger,
@@ -64,7 +63,7 @@ export class MonitoringService {
       this.logger.info({
         event: 'MonitoringService.checkMissingBlocks',
         message: `Need to restart unprocessed blocks`,
-        missed: missedBlocks
+        missed: missedBlocks,
       })
 
       try {
@@ -73,7 +72,7 @@ export class MonitoringService {
         this.logger.error({
           event: 'MonitoringService.checkMissingBlocks',
           error: error.message,
-          missedBlocks
+          missedBlocks,
         })
       }
     }

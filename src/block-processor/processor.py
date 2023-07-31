@@ -5,6 +5,7 @@ import sys
 import pika
 import time
 import os
+from typing import Any, Dict
 from dotenv import load_dotenv
 from pino import pino
 
@@ -122,9 +123,10 @@ def processQueueMessage(ch, method, properties, body: str):
     ch.basic_ack(delivery_tag=method.delivery_tag)
 
 
-def sendMessageToQueue(message: json):
+def sendMessageToQueue(message: Dict[str, Any]):
     try:
-        channel.basic_publish(exchange='', routing_key=send_queue_name, body=json.dumps(message))
+        if channel is not None:
+            channel.basic_publish(exchange='', routing_key=send_queue_name, body=json.dumps(message))
     except Exception:
         logger.info('Unable to send data to RabbitMQ')
 
@@ -134,11 +136,11 @@ channel = None
 while True:
     try:
         logger.info("Connecting to RabbitMQ")
-        parameters = pika.URLParameters(os.environ.get('RABBITMQ'))
+        parameters = pika.URLParameters(str(os.environ.get('RABBITMQ')))
         connection = pika.BlockingConnection(parameters)
         channel = connection.channel()
-        receive_queue_name = os.environ.get('RABBITMQ_QUEUE_BLOCK_PROCESSOR')
-        send_queue_name = os.environ.get('RABBITMQ_QUEUE_BLOCK_WRITER')
+        receive_queue_name = str(os.environ.get('RABBITMQ_QUEUE_BLOCK_PROCESSOR'))
+        send_queue_name = str(os.environ.get('RABBITMQ_QUEUE_BLOCK_WRITER'))
         channel.queue_declare(queue=receive_queue_name, durable=True)
         channel.queue_declare(queue=send_queue_name, durable=True)
 
