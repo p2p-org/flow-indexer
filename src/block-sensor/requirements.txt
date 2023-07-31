@@ -2,3 +2,4 @@ requests
 python-dotenv
 pika
 pino
+flake8
