@@ -44,10 +44,10 @@ def sendMessageToRabbitMQ(msg: dict[str, int]):
     global channel
 
     if channel is None:
-        connectToRabbitMQ() 
+        connectToRabbitMQ()
 
     try:
-        if channel is not None:  
+        if channel is not None:
             channel.basic_publish(exchange='', routing_key=queue_name, body=json.dumps(msg))
 
     except Exception:
