@@ -1,0 +1,87 @@
+name: Lint and test block-sensor
+
+on:
+  push:
+    paths:
+      - "src/block-sensor/**"
+      - ".github/workflows/check-block-sensor.yaml"
+
+jobs:
+  lint:
+    name: Lint with flake8
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/block-sensor
+
+
+    steps:
+      - uses: styfle/cancel-workflow-action@0.11.0
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: pip3 install -r requirements.txt
+
+      - name: Install flake8
+        run: pip3 install flake8
+
+      - name: Lint with flake8
+        run: flake8 --count --statistics
+
+  test:
+    name: Run unit tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/block-sensor
+
+    steps:
+      - uses: styfle/cancel-workflow-action@0.11.0
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: pip3 install -r requirements.txt
+
+      - name: Install pytest
+        run: pip3 install pytest
+
+      - name: Run unit tests
+        run: pytest
+
+  pyright:
+    name: Check with pyright
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: styfle/cancel-workflow-action@0.11.0
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: pip3 install -r requirements.txt
+
+      - name: Install pyright
+        run: pip3 install pyright
+
+      - name: Check types
+        run: pyright
